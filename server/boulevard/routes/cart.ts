@@ -270,17 +270,18 @@ router.post('/cart/add-bookable-item', async (req, res) => {
   }
 })
 
-// Add purchasable item to cart
+// Add purchasable item to cart (matches book5.txt specification)
 router.post('/cart/add-purchasable-item', async (req, res) => {
   try {
-    const { id: cartUuid, itemId } = req.body
+    const { input } = req.body
+    const { id: cartUuid, itemId } = input
 
     if (!cartUuid || !itemId) {
       return res.status(400).json({ error: 'Cart ID and item ID are required' })
     }
 
     // Extract service ID from URN
-    const serviceId = itemId.replace('urn:blvd:Service:', '')
+    const serviceId = itemId.replace('urn:blvd:Service:', '').replace('urn:blvd:ProductLocation:', '')
 
     // Get cart
     const cartResult = await query('SELECT id FROM boulevard_carts WHERE cart_uuid = $1', [cartUuid])
@@ -323,10 +324,11 @@ router.post('/cart/add-purchasable-item', async (req, res) => {
   }
 })
 
-// Add gift card item to cart
+// Add gift card item to cart (matches book5.txt specification)
 router.post('/cart/add-gift-card-item', async (req, res) => {
   try {
-    const { id: cartUuid, itemId, itemPrice } = req.body
+    const { input } = req.body
+    const { id: cartUuid, itemId, itemPrice } = input
 
     if (!cartUuid || !itemId || !itemPrice) {
       return res.status(400).json({ error: 'Cart ID, item ID, and price are required' })
@@ -362,9 +364,10 @@ router.post('/cart/add-gift-card-item', async (req, res) => {
   }
 })
 
-// Create gift card email fulfillment
+// Create gift card email fulfillment (matches book5.txt specification)
 router.post('/cart/create-gift-card-email-fulfillment', async (req, res) => {
   try {
+    const { input } = req.body
     const { 
       id: cartUuid, 
       itemId, 
@@ -373,7 +376,7 @@ router.post('/cart/create-gift-card-email-fulfillment', async (req, res) => {
       recipientEmail, 
       recipientName, 
       deliveryDate 
-    } = req.body
+    } = input
 
     if (!cartUuid || !itemId || !recipientEmail) {
       return res.status(400).json({ error: 'Cart ID, item ID, and recipient email are required' })
@@ -409,6 +412,12 @@ router.post('/cart/create-gift-card-email-fulfillment', async (req, res) => {
             selectedItems: [{
               __typename: "CartGiftCardItem",
               id: gift_card_uuid,
+              giftCardDesign: {
+                id: null,
+                image: null,
+                backgroundColor: "#FFFFFF",
+                foregroundText: "#000000"
+              },
               emailFulfillment: {
                 id: fulfillmentId,
                 senderName,
@@ -520,10 +529,15 @@ router.post('/create-cart-guest', async (req, res) => {
   }
 })
 
-// Add card payment method
+// Add card payment method (matches book3.txt and book4.txt specification)
 router.post('/add-cart-card-payment-method', async (req, res) => {
   try {
-    const { id: cartUuid, token, select } = req.body
+    const { input } = req.body
+    const { id: cartUuid, token, select = false } = input
+
+    if (!cartUuid || !token) {
+      return res.status(400).json({ error: 'Cart ID and token are required' })
+    }
 
     const cartResult = await query(`
       SELECT id FROM boulevard_carts WHERE cart_uuid = $1
