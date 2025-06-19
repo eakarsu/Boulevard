@@ -93,6 +93,24 @@ router.get('/', async (req: any, res) => {
 // Create new appointment
 router.post('/', async (req: any, res) => {
   try {
+    if (!req.user) {
+      return res.status(401).json({ error: 'User not authenticated' })
+    }
+    
+    // If businessId is not set, try to get it from the user's business ownership
+    let businessId = req.user.businessId
+    if (!businessId) {
+      const businessResult = await query(
+        'SELECT id FROM businesses WHERE owner_id = $1 LIMIT 1',
+        [req.user.id]
+      )
+      if (businessResult.rows.length > 0) {
+        businessId = businessResult.rows[0].id
+      } else {
+        return res.status(404).json({ error: 'No business found for user' })
+      }
+    }
+    
     const { clientId, staffId, serviceId, startTime, endTime, notes } = req.body
     
     // Get service price
@@ -110,7 +128,7 @@ router.post('/', async (req: any, res) => {
     // Get default location (in real app, this would be selected)
     const locationResult = await query(
       'SELECT id FROM locations WHERE business_id = $1 LIMIT 1',
-      [req.user.businessId]
+      [businessId]
     )
     
     const locationId = locationResult.rows[0]?.id
@@ -119,12 +137,12 @@ router.post('/', async (req: any, res) => {
       `INSERT INTO appointments (business_id, location_id, client_id, staff_id, service_id, start_time, end_time, price, notes)
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
        RETURNING *`,
-      [req.user.businessId, locationId, clientId, staffId, serviceId, startTime, endTime, price, notes]
+      [businessId, locationId, clientId, staffId, serviceId, startTime, endTime, price, notes]
     )
     
     // Emit real-time update
     const io = req.app.get('io')
-    io.to(`business-${req.user.businessId}`).emit('appointment-created', result.rows[0])
+    io.to(`business-${businessId}`).emit('appointment-created', result.rows[0])
     
     res.status(201).json(result.rows[0])
   } catch (error) {

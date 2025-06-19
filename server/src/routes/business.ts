@@ -65,6 +65,24 @@ router.get('/settings', async (req: any, res) => {
 // Update business settings
 router.put('/settings', async (req: any, res) => {
   try {
+    if (!req.user) {
+      return res.status(401).json({ error: 'User not authenticated' })
+    }
+    
+    // If businessId is not set, try to get it from the user's business ownership
+    let businessId = req.user.businessId
+    if (!businessId) {
+      const businessResult = await query(
+        'SELECT id FROM businesses WHERE owner_id = $1 LIMIT 1',
+        [req.user.id]
+      )
+      if (businessResult.rows.length > 0) {
+        businessId = businessResult.rows[0].id
+      } else {
+        return res.status(404).json({ error: 'No business found for user' })
+      }
+    }
+    
     const { name, email, phone, website, address, settings } = req.body
     
     // Update business
@@ -72,7 +90,7 @@ router.put('/settings', async (req: any, res) => {
       `UPDATE businesses 
        SET name = $1, email = $2, phone = $3, website = $4, updated_at = CURRENT_TIMESTAMP
        WHERE id = $5`,
-      [name, email, phone, website, req.user.businessId]
+      [name, email, phone, website, businessId]
     )
     
     // Update address
@@ -81,7 +99,7 @@ router.put('/settings', async (req: any, res) => {
         `UPDATE business_addresses 
          SET street = $1, city = $2, state = $3, zip_code = $4, country = $5
          WHERE business_id = $6`,
-        [address.street, address.city, address.state, address.zipCode, address.country, req.user.businessId]
+        [address.street, address.city, address.state, address.zipCode, address.country, businessId]
       )
     }
     
@@ -98,7 +116,7 @@ router.put('/settings', async (req: any, res) => {
           settings.timezone, settings.currency, settings.bookingWindow,
           settings.cancellationPolicy, settings.noShowPolicy, settings.requireDeposit,
           settings.depositAmount, settings.allowOnlineBooking, settings.autoConfirmBookings,
-          settings.sendReminders, settings.reminderTimes, req.user.businessId
+          settings.sendReminders, settings.reminderTimes, businessId
         ]
       )
     }

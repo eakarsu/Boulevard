@@ -114,13 +114,31 @@ router.get('/stats', async (req: any, res) => {
 // Create new service
 router.post('/', async (req: any, res) => {
   try {
+    if (!req.user) {
+      return res.status(401).json({ error: 'User not authenticated' })
+    }
+    
+    // If businessId is not set, try to get it from the user's business ownership
+    let businessId = req.user.businessId
+    if (!businessId) {
+      const businessResult = await query(
+        'SELECT id FROM businesses WHERE owner_id = $1 LIMIT 1',
+        [req.user.id]
+      )
+      if (businessResult.rows.length > 0) {
+        businessId = businessResult.rows[0].id
+      } else {
+        return res.status(404).json({ error: 'No business found for user' })
+      }
+    }
+    
     const { name, description, category, duration_minutes, price, color } = req.body
     
     const result = await query(
       `INSERT INTO services (business_id, name, description, category, duration_minutes, price, color)
        VALUES ($1, $2, $3, $4, $5, $6, $7)
        RETURNING *`,
-      [req.user.businessId, name, description, category, duration_minutes, price, color]
+      [businessId, name, description, category, duration_minutes, price, color]
     )
     
     res.status(201).json(result.rows[0])
@@ -133,6 +151,24 @@ router.post('/', async (req: any, res) => {
 // Update service
 router.put('/:id', async (req: any, res) => {
   try {
+    if (!req.user) {
+      return res.status(401).json({ error: 'User not authenticated' })
+    }
+    
+    // If businessId is not set, try to get it from the user's business ownership
+    let businessId = req.user.businessId
+    if (!businessId) {
+      const businessResult = await query(
+        'SELECT id FROM businesses WHERE owner_id = $1 LIMIT 1',
+        [req.user.id]
+      )
+      if (businessResult.rows.length > 0) {
+        businessId = businessResult.rows[0].id
+      } else {
+        return res.status(404).json({ error: 'No business found for user' })
+      }
+    }
+    
     const { id } = req.params
     const { name, description, category, duration_minutes, price, color, is_active } = req.body
     
@@ -142,7 +178,7 @@ router.put('/:id', async (req: any, res) => {
            price = $5, color = $6, is_active = $7, updated_at = CURRENT_TIMESTAMP
        WHERE id = $8 AND business_id = $9
        RETURNING *`,
-      [name, description, category, duration_minutes, price, color, is_active, id, req.user.businessId]
+      [name, description, category, duration_minutes, price, color, is_active, id, businessId]
     )
     
     if (result.rows.length === 0) {

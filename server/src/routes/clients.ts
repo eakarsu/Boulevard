@@ -139,6 +139,24 @@ router.get('/stats', async (req: any, res) => {
 // Create new client
 router.post('/', async (req: any, res) => {
   try {
+    if (!req.user) {
+      return res.status(401).json({ error: 'User not authenticated' })
+    }
+    
+    // If businessId is not set, try to get it from the user's business ownership
+    let businessId = req.user.businessId
+    if (!businessId) {
+      const businessResult = await query(
+        'SELECT id FROM businesses WHERE owner_id = $1 LIMIT 1',
+        [req.user.id]
+      )
+      if (businessResult.rows.length > 0) {
+        businessId = businessResult.rows[0].id
+      } else {
+        return res.status(404).json({ error: 'No business found for user' })
+      }
+    }
+    
     const { firstName, lastName, email, phone, notes } = req.body
     
     const result = await query(
@@ -158,6 +176,24 @@ router.post('/', async (req: any, res) => {
 // Update client
 router.put('/:id', async (req: any, res) => {
   try {
+    if (!req.user) {
+      return res.status(401).json({ error: 'User not authenticated' })
+    }
+    
+    // If businessId is not set, try to get it from the user's business ownership
+    let businessId = req.user.businessId
+    if (!businessId) {
+      const businessResult = await query(
+        'SELECT id FROM businesses WHERE owner_id = $1 LIMIT 1',
+        [req.user.id]
+      )
+      if (businessResult.rows.length > 0) {
+        businessId = businessResult.rows[0].id
+      } else {
+        return res.status(404).json({ error: 'No business found for user' })
+      }
+    }
+    
     const { id } = req.params
     const { firstName, lastName, email, phone, notes } = req.body
     

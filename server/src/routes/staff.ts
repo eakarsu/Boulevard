@@ -137,6 +137,24 @@ router.get('/stats', async (req: any, res) => {
 // Create new staff member
 router.post('/', async (req: any, res) => {
   try {
+    if (!req.user) {
+      return res.status(401).json({ error: 'User not authenticated' })
+    }
+    
+    // If businessId is not set, try to get it from the user's business ownership
+    let businessId = req.user.businessId
+    if (!businessId) {
+      const businessResult = await query(
+        'SELECT id FROM businesses WHERE owner_id = $1 LIMIT 1',
+        [req.user.id]
+      )
+      if (businessResult.rows.length > 0) {
+        businessId = businessResult.rows[0].id
+      } else {
+        return res.status(404).json({ error: 'No business found for user' })
+      }
+    }
+    
     const { firstName, lastName, email, phone, title, skills, commissionRate, hourlyRate } = req.body
     
     // First create user
@@ -154,7 +172,7 @@ router.post('/', async (req: any, res) => {
       `INSERT INTO staff (business_id, user_id, title, skills, commission_rate, hourly_rate)
        VALUES ($1, $2, $3, $4, $5, $6)
        RETURNING *`,
-      [req.user.businessId, userId, title, skills, commissionRate, hourlyRate]
+      [businessId, userId, title, skills, commissionRate, hourlyRate]
     )
     
     res.status(201).json(staffResult.rows[0])
