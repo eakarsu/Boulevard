@@ -52,7 +52,7 @@ export default function Clients() {
       }
       
       const response = await clientsAPI.getClients(params)
-      setClients(Array.isArray(response.data?.data) ? response.data.data : [])
+      setClients(Array.isArray(response.data?.clients) ? response.data.clients : [])
       setTotalPages(response.data?.totalPages || 1)
     } catch (error) {
       console.error('Error fetching clients:', error)
@@ -65,7 +65,7 @@ export default function Clients() {
   const fetchStats = async () => {
     try {
       const response = await clientsAPI.getClientStats()
-      setStats(response.data?.data || {
+      setStats(response.data || {
         total_clients: 0,
         active_clients: 0,
         vip_clients: 0,

@@ -46,7 +46,7 @@ export default function Calendar() {
       })
       
       // Transform the data to match our component interface
-      const appointmentsData = Array.isArray(response.data?.data) ? response.data.data : []
+      const appointmentsData = Array.isArray(response.data) ? response.data : []
       const transformedAppointments = appointmentsData.map((apt: any) => ({
         id: apt.id,
         clientName: `${apt.client?.first_name || ''} ${apt.client?.last_name || ''}`.trim() || 'Unknown Client',
