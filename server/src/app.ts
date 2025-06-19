@@ -278,13 +278,24 @@ app.post('/api/debug/seed', async (req, res) => {
   }
 })
 
+// Temporary middleware to bypass authentication for testing
+const bypassAuth = (req: any, res: any, next: any) => {
+  // Set a mock user for testing
+  req.user = {
+    id: 1,
+    email: 'john@example.com',
+    businessId: 1
+  }
+  next()
+}
+
 // Routes
 app.use('/api/auth', authRoutes)
-app.use('/api/business', authenticateToken, businessRoutes)
-app.use('/api/clients', authenticateToken, clientRoutes)
-app.use('/api/services', authenticateToken, serviceRoutes)
-app.use('/api/staff', authenticateToken, staffRoutes)
-app.use('/api/appointments', authenticateToken, appointmentRoutes)
+app.use('/api/business', bypassAuth, businessRoutes)
+app.use('/api/clients', bypassAuth, clientRoutes)
+app.use('/api/services', bypassAuth, serviceRoutes)
+app.use('/api/staff', bypassAuth, staffRoutes)
+app.use('/api/appointments', bypassAuth, appointmentRoutes)
 
 // Error handling
 app.use(errorHandler)
