@@ -12,7 +12,12 @@
     "docker:up": "docker-compose up -d",
     "docker:down": "docker-compose down",
     "db:migrate": "cd server && npm run db:migrate",
-    "db:seed": "cd server && npm run db:seed"
+    "db:seed": "cd server && npm run db:seed",
+    "test": "cd server/boulevard/tests && npm install && npm test",
+    "test:verbose": "cd server/boulevard/tests && npm install && npm run test:verbose",
+    "test:watch": "cd server/boulevard/tests && npm install && npm run test:watch",
+    "test:integration": "cd server/boulevard/tests && npm install && npm run test:integration",
+    "test:manual": "cd server/boulevard/tests && chmod +x manual-test.sh && ./manual-test.sh"
   },
   "dependencies": {
     "@headlessui/react": "^1.7.13",
