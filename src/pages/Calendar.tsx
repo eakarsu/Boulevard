@@ -92,6 +92,7 @@ export default function Calendar() {
     const filtered = appointments.filter(apt => {
       const aptDate = new Date(apt.date)
       const matches = isSameDay(aptDate, date)
+      console.log(`Checking appointment ${apt.id}: ${aptDate.toDateString()} vs ${date.toDateString()} = ${matches}`)
       return matches
     })
     console.log(`Appointments for ${date.toDateString()}:`, filtered.length)
