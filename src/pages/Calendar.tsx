@@ -87,7 +87,16 @@ export default function Calendar() {
   }
 
   const getAppointmentsForDate = (date: Date) => {
-    return appointments.filter(apt => isSameDay(new Date(apt.date), date))
+    const filtered = appointments.filter(apt => {
+      const aptDate = new Date(apt.date)
+      const matches = isSameDay(aptDate, date)
+      if (matches) {
+        console.log(`Appointment ${apt.id} matches date ${date.toDateString()}:`, apt)
+      }
+      return matches
+    })
+    console.log(`Appointments for ${date.toDateString()}:`, filtered.length)
+    return filtered
   }
 
   const nextWeek = () => setCurrentWeek(addWeeks(currentWeek, 1))
