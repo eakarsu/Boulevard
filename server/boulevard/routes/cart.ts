@@ -13,6 +13,15 @@ router.post('/cart/create', async (req, res) => {
       return res.status(400).json({ error: 'locationId is required' })
     }
 
+    // Validate that location exists
+    const locationCheck = await query(`
+      SELECT id FROM boulevard_locations WHERE id = $1
+    `, [locationId])
+
+    if (locationCheck.rows.length === 0) {
+      return res.status(404).json({ error: 'Location not found' })
+    }
+
     const cartUuid = `urn:blvd:Cart:${uuidv4()}`
 
     // Create cart

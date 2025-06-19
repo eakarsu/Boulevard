@@ -134,10 +134,10 @@ describe('Boulevard API Integration Tests', () => {
     it('should handle invalid locationId gracefully', async () => {
       const res = await api.post('/api/boulevard/cart/create')
         .send({ locationId: 999 })
-        .expect(200)
+        .expect(404)
 
-      // Should create cart but with empty categories
-      expect(res.body.data.createCart.cart.availableCategories).to.be.an('array')
+      expect(res.body).to.have.property('error')
+      expect(res.body.error).to.equal('Location not found')
     })
 
     it('should get cart item details from database', async () => {
