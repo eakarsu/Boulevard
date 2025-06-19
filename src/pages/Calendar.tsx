@@ -1,42 +1,19 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { ChevronLeft, ChevronRight, Plus, Clock, User, MapPin } from 'lucide-react'
 import { format, startOfWeek, addDays, isSameDay, addWeeks, subWeeks } from 'date-fns'
+import { appointmentsAPI } from '../services/api'
 
-const mockAppointments = [
-  {
-    id: '1',
-    clientName: 'Sarah Johnson',
-    service: 'Haircut & Style',
-    staff: 'Emma Wilson',
-    startTime: '10:00',
-    endTime: '11:00',
-    date: new Date(),
-    status: 'confirmed',
-    color: 'bg-blue-500',
-  },
-  {
-    id: '2',
-    clientName: 'Michael Chen',
-    service: 'Beard Trim',
-    staff: 'James Rodriguez',
-    startTime: '11:30',
-    endTime: '12:00',
-    date: new Date(),
-    status: 'in_progress',
-    color: 'bg-green-500',
-  },
-  {
-    id: '3',
-    clientName: 'Lisa Anderson',
-    service: 'Color & Highlights',
-    staff: 'Emma Wilson',
-    startTime: '14:00',
-    endTime: '16:00',
-    date: addDays(new Date(), 1),
-    status: 'scheduled',
-    color: 'bg-purple-500',
-  },
-]
+interface Appointment {
+  id: string
+  clientName: string
+  service: string
+  staff: string
+  startTime: string
+  endTime: string
+  date: Date
+  status: string
+  color: string
+}
 
 const timeSlots = Array.from({ length: 12 }, (_, i) => {
   const hour = i + 8 // Start from 8 AM
@@ -48,12 +25,64 @@ const weekDays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
 export default function Calendar() {
   const [currentWeek, setCurrentWeek] = useState(new Date())
   const [view, setView] = useState<'week' | 'day'>('week')
+  const [appointments, setAppointments] = useState<Appointment[]>([])
+  const [loading, setLoading] = useState(true)
 
   const weekStart = startOfWeek(currentWeek)
   const weekDates = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i))
 
+  useEffect(() => {
+    fetchAppointments()
+  }, [currentWeek])
+
+  const fetchAppointments = async () => {
+    try {
+      setLoading(true)
+      const weekEnd = addDays(weekStart, 6)
+      
+      const response = await appointmentsAPI.getAppointments({
+        start_date: weekStart.toISOString(),
+        end_date: weekEnd.toISOString()
+      })
+      
+      // Transform the data to match our component interface
+      const transformedAppointments = (response.data || []).map((apt: any) => ({
+        id: apt.id,
+        clientName: apt.clientName,
+        service: apt.service,
+        staff: apt.staff,
+        startTime: apt.startTime,
+        endTime: apt.endTime,
+        date: apt.date,
+        status: apt.status,
+        color: apt.color || getStatusColor(apt.status)
+      }))
+      
+      setAppointments(transformedAppointments)
+    } catch (error) {
+      console.error('Error fetching appointments:', error)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'confirmed':
+        return 'bg-blue-500'
+      case 'in_progress':
+        return 'bg-green-500'
+      case 'completed':
+        return 'bg-gray-500'
+      case 'cancelled':
+        return 'bg-red-500'
+      default:
+        return 'bg-purple-500'
+    }
+  }
+
   const getAppointmentsForDate = (date: Date) => {
-    return mockAppointments.filter(apt => isSameDay(apt.date, date))
+    return appointments.filter(apt => isSameDay(new Date(apt.date), date))
   }
 
   const nextWeek = () => setCurrentWeek(addWeeks(currentWeek, 1))
@@ -142,43 +171,50 @@ export default function Calendar() {
 
             {/* Time Slots */}
             <div className="relative">
-              {timeSlots.map((time, timeIndex) => (
-                <div key={time} className="grid grid-cols-8 border-b border-gray-100">
-                  <div className="p-4 text-sm text-gray-500 border-r border-gray-200">
-                    {time}
-                  </div>
-                  {weekDates.map((date, dateIndex) => {
-                    const appointments = getAppointmentsForDate(date)
-                    const timeAppointments = appointments.filter(apt => apt.startTime === time)
-                    
-                    return (
-                      <div
-                        key={`${date.toISOString()}-${time}`}
-                        className="relative p-2 border-l border-gray-200 min-h-[60px] hover:bg-gray-50"
-                      >
-                        {timeAppointments.map((appointment) => (
-                          <div
-                            key={appointment.id}
-                            className={`${appointment.color} text-white p-2 rounded-md text-xs mb-1 cursor-pointer hover:opacity-90`}
-                          >
-                            <div className="font-medium truncate">
-                              {appointment.clientName}
-                            </div>
-                            <div className="flex items-center space-x-1 mt-1">
-                              <Clock className="h-3 w-3" />
-                              <span>{appointment.startTime}-{appointment.endTime}</span>
-                            </div>
-                            <div className="flex items-center space-x-1">
-                              <User className="h-3 w-3" />
-                              <span className="truncate">{appointment.staff}</span>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    )
-                  })}
+              {loading ? (
+                <div className="p-8 text-center">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600 mx-auto"></div>
+                  <p className="mt-2 text-sm text-gray-500">Loading appointments...</p>
                 </div>
-              ))}
+              ) : (
+                timeSlots.map((time, timeIndex) => (
+                  <div key={time} className="grid grid-cols-8 border-b border-gray-100">
+                    <div className="p-4 text-sm text-gray-500 border-r border-gray-200">
+                      {time}
+                    </div>
+                    {weekDates.map((date, dateIndex) => {
+                      const dayAppointments = getAppointmentsForDate(date)
+                      const timeAppointments = dayAppointments.filter(apt => apt.startTime === time)
+                      
+                      return (
+                        <div
+                          key={`${date.toISOString()}-${time}`}
+                          className="relative p-2 border-l border-gray-200 min-h-[60px] hover:bg-gray-50"
+                        >
+                          {timeAppointments.map((appointment) => (
+                            <div
+                              key={appointment.id}
+                              className={`${appointment.color} text-white p-2 rounded-md text-xs mb-1 cursor-pointer hover:opacity-90`}
+                            >
+                              <div className="font-medium truncate">
+                                {appointment.clientName}
+                              </div>
+                              <div className="flex items-center space-x-1 mt-1">
+                                <Clock className="h-3 w-3" />
+                                <span>{appointment.startTime}-{appointment.endTime}</span>
+                              </div>
+                              <div className="flex items-center space-x-1">
+                                <User className="h-3 w-3" />
+                                <span className="truncate">{appointment.staff}</span>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )
+                    })}
+                  </div>
+                ))
+              )}
             </div>
           </div>
         </div>

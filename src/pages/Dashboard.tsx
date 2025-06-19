@@ -1,65 +1,132 @@
-import React from 'react'
+import React, { useState, useEffect } from 'react'
 import { Calendar, Users, DollarSign, Clock, TrendingUp, TrendingDown } from 'lucide-react'
+import { appointmentsAPI, clientsAPI, servicesAPI, staffAPI } from '../services/api'
 
-const stats = [
-  {
-    name: 'Total Revenue',
-    value: '$12,426',
-    change: '+12%',
-    changeType: 'increase',
-    icon: DollarSign,
-  },
-  {
-    name: 'Appointments Today',
-    value: '24',
-    change: '+3',
-    changeType: 'increase',
-    icon: Calendar,
-  },
-  {
-    name: 'New Clients',
-    value: '8',
-    change: '+2',
-    changeType: 'increase',
-    icon: Users,
-  },
-  {
-    name: 'Avg. Service Time',
-    value: '45min',
-    change: '-5min',
-    changeType: 'decrease',
-    icon: Clock,
-  },
-]
+interface DashboardStats {
+  totalRevenue: number
+  appointmentsToday: number
+  newClients: number
+  avgServiceTime: number
+}
 
-const recentAppointments = [
-  {
-    id: '1',
-    client: 'Sarah Johnson',
-    service: 'Haircut & Style',
-    time: '10:00 AM',
-    staff: 'Emma Wilson',
-    status: 'confirmed',
-  },
-  {
-    id: '2',
-    client: 'Michael Chen',
-    service: 'Beard Trim',
-    time: '11:30 AM',
-    staff: 'James Rodriguez',
-    status: 'in_progress',
-  },
-  {
-    id: '3',
-    client: 'Lisa Anderson',
-    service: 'Color & Highlights',
-    time: '2:00 PM',
-    staff: 'Emma Wilson',
-    status: 'scheduled',
-  },
-]
+interface RecentAppointment {
+  id: string
+  clientName: string
+  service: string
+  startTime: string
+  staff: string
+  status: string
+}
 
 export default function Dashboard() {
+  const [stats, setStats] = useState<DashboardStats>({
+    totalRevenue: 0,
+    appointmentsToday: 0,
+    newClients: 0,
+    avgServiceTime: 0
+  })
+  const [recentAppointments, setRecentAppointments] = useState<RecentAppointment[]>([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    const fetchDashboardData = async () => {
+      try {
+        setLoading(true)
+        
+        // Get today's date range
+        const today = new Date()
+        const startOfDay = new Date(today.setHours(0, 0, 0, 0)).toISOString()
+        const endOfDay = new Date(today.setHours(23, 59, 59, 999)).toISOString()
+        
+        // Fetch all data in parallel
+        const [appointmentsRes, clientStatsRes, serviceStatsRes, staffStatsRes] = await Promise.all([
+          appointmentsAPI.getAppointments({ start_date: startOfDay, end_date: endOfDay }),
+          clientsAPI.getClientStats(),
+          servicesAPI.getServiceStats(),
+          staffAPI.getStaffStats()
+        ])
+        
+        const todayAppointments = appointmentsRes.data || []
+        const clientStats = clientStatsRes.data || {}
+        const serviceStats = serviceStatsRes.data || {}
+        
+        // Calculate stats
+        setStats({
+          totalRevenue: serviceStats.monthly_revenue || 0,
+          appointmentsToday: todayAppointments.length,
+          newClients: clientStats.total_clients || 0,
+          avgServiceTime: 45 // This would need to be calculated from actual data
+        })
+        
+        // Set recent appointments (limit to 3)
+        setRecentAppointments(todayAppointments.slice(0, 3))
+        
+      } catch (error) {
+        console.error('Error fetching dashboard data:', error)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchDashboardData()
+  }, [])
+
+  const statsConfig = [
+    {
+      name: 'Total Revenue',
+      value: `$${stats.totalRevenue.toLocaleString()}`,
+      change: '+12%', // This would need historical data to calculate
+      changeType: 'increase' as const,
+      icon: DollarSign,
+    },
+    {
+      name: 'Appointments Today',
+      value: stats.appointmentsToday.toString(),
+      change: '+3', // This would need historical data to calculate
+      changeType: 'increase' as const,
+      icon: Calendar,
+    },
+    {
+      name: 'New Clients',
+      value: stats.newClients.toString(),
+      change: '+2', // This would need historical data to calculate
+      changeType: 'increase' as const,
+      icon: Users,
+    },
+    {
+      name: 'Avg. Service Time',
+      value: `${stats.avgServiceTime}min`,
+      change: '-5min', // This would need historical data to calculate
+      changeType: 'decrease' as const,
+      icon: Clock,
+    },
+  ]
+
+  if (loading) {
+    return (
+      <div className="py-6">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8">
+          <div className="animate-pulse">
+            <div className="h-8 bg-gray-200 rounded w-48 mb-8"></div>
+            <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4 mb-8">
+              {[...Array(4)].map((_, i) => (
+                <div key={i} className="card">
+                  <div className="card-body">
+                    <div className="h-16 bg-gray-200 rounded"></div>
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div className="card">
+              <div className="card-body">
+                <div className="h-64 bg-gray-200 rounded"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    )
+  }
   return (
     <div className="py-6">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8">
@@ -70,7 +137,7 @@ export default function Dashboard() {
         {/* Stats */}
         <div className="mt-8">
           <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
-            {stats.map((stat) => {
+            {statsConfig.map((stat) => {
               const Icon = stat.icon
               return (
                 <div key={stat.name} className="card">

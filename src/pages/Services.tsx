@@ -1,90 +1,76 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { Plus, Clock, DollarSign, Users, Edit, Trash2, Search } from 'lucide-react'
+import { servicesAPI } from '../services/api'
 
-const mockServices = [
-  {
-    id: '1',
-    name: 'Haircut & Style',
-    category: 'Hair',
-    duration: 60,
-    price: 85,
-    description: 'Professional haircut with wash and style',
-    color: '#3B82F6',
-    isActive: true,
-    staffCount: 3,
-    bookingsThisMonth: 45,
-  },
-  {
-    id: '2',
-    name: 'Color & Highlights',
-    category: 'Hair',
-    duration: 120,
-    price: 150,
-    description: 'Full color service with highlights',
-    color: '#8B5CF6',
-    isActive: true,
-    staffCount: 2,
-    bookingsThisMonth: 28,
-  },
-  {
-    id: '3',
-    name: 'Beard Trim',
-    category: 'Grooming',
-    duration: 30,
-    price: 35,
-    description: 'Professional beard trimming and shaping',
-    color: '#10B981',
-    isActive: true,
-    staffCount: 2,
-    bookingsThisMonth: 32,
-  },
-  {
-    id: '4',
-    name: 'Deep Conditioning Treatment',
-    category: 'Hair',
-    duration: 45,
-    price: 65,
-    description: 'Intensive hair treatment for damaged hair',
-    color: '#F59E0B',
-    isActive: true,
-    staffCount: 3,
-    bookingsThisMonth: 18,
-  },
-  {
-    id: '5',
-    name: 'Eyebrow Shaping',
-    category: 'Beauty',
-    duration: 20,
-    price: 25,
-    description: 'Professional eyebrow shaping and trimming',
-    color: '#EF4444',
-    isActive: false,
-    staffCount: 1,
-    bookingsThisMonth: 0,
-  },
-]
+interface Service {
+  id: string
+  name: string
+  category: string
+  duration_minutes: number
+  price: number
+  description?: string
+  color: string
+  is_active: boolean
+  staff_count: number
+  bookings_this_month: number
+}
+
+interface ServiceStats {
+  total_services: number
+  active_services: number
+  monthly_revenue: number
+  total_bookings: number
+}
 
 const categories = ['All', 'Hair', 'Grooming', 'Beauty', 'Nails', 'Spa']
 
 export default function Services() {
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedCategory, setSelectedCategory] = useState('All')
-  const [showAddModal, setShowAddModal] = useState(false)
-
-  const filteredServices = mockServices.filter(service => {
-    const matchesSearch = service.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         service.description.toLowerCase().includes(searchTerm.toLowerCase())
-    const matchesCategory = selectedCategory === 'All' || service.category === selectedCategory
-    return matchesSearch && matchesCategory
+  const [services, setServices] = useState<Service[]>([])
+  const [stats, setStats] = useState<ServiceStats>({
+    total_services: 0,
+    active_services: 0,
+    monthly_revenue: 0,
+    total_bookings: 0
   })
+  const [loading, setLoading] = useState(true)
 
-  const totalRevenue = mockServices.reduce((sum, service) => 
-    sum + (service.price * service.bookingsThisMonth), 0
-  )
+  useEffect(() => {
+    fetchServices()
+    fetchStats()
+  }, [searchTerm, selectedCategory])
 
-  const totalBookings = mockServices.reduce((sum, service) => 
-    sum + service.bookingsThisMonth, 0
-  )
+  const fetchServices = async () => {
+    try {
+      setLoading(true)
+      const params = {
+        search: searchTerm || undefined,
+        category: selectedCategory !== 'All' ? selectedCategory : undefined
+      }
+      
+      const response = await servicesAPI.getServices(params)
+      setServices(response.data || [])
+    } catch (error) {
+      console.error('Error fetching services:', error)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const fetchStats = async () => {
+    try {
+      const response = await servicesAPI.getServiceStats()
+      setStats(response.data || {
+        total_services: 0,
+        active_services: 0,
+        monthly_revenue: 0,
+        total_bookings: 0
+      })
+    } catch (error) {
+      console.error('Error fetching service stats:', error)
+    }
+  }
 
   return (
     <div className="py-6">
@@ -113,7 +99,7 @@ export default function Services() {
                 </div>
                 <div className="ml-4">
                   <p className="text-sm font-medium text-gray-500">Total Services</p>
-                  <p className="text-2xl font-semibold text-gray-900">{mockServices.length}</p>
+                  <p className="text-2xl font-semibold text-gray-900">{stats.total_services}</p>
                 </div>
               </div>
             </div>
@@ -129,9 +115,7 @@ export default function Services() {
                 </div>
                 <div className="ml-4">
                   <p className="text-sm font-medium text-gray-500">Active Services</p>
-                  <p className="text-2xl font-semibold text-gray-900">
-                    {mockServices.filter(s => s.isActive).length}
-                  </p>
+                  <p className="text-2xl font-semibold text-gray-900">{stats.active_services}</p>
                 </div>
               </div>
             </div>
@@ -148,7 +132,7 @@ export default function Services() {
                 <div className="ml-4">
                   <p className="text-sm font-medium text-gray-500">Monthly Revenue</p>
                   <p className="text-2xl font-semibold text-gray-900">
-                    ${totalRevenue.toLocaleString()}
+                    ${stats.monthly_revenue.toLocaleString()}
                   </p>
                 </div>
               </div>
@@ -165,7 +149,7 @@ export default function Services() {
                 </div>
                 <div className="ml-4">
                   <p className="text-sm font-medium text-gray-500">Total Bookings</p>
-                  <p className="text-2xl font-semibold text-gray-900">{totalBookings}</p>
+                  <p className="text-2xl font-semibold text-gray-900">{stats.total_bookings}</p>
                 </div>
               </div>
             </div>
@@ -203,7 +187,18 @@ export default function Services() {
 
         {/* Services Grid */}
         <div className="mt-8 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-          {filteredServices.map((service) => (
+          {loading ? (
+            [...Array(6)].map((_, i) => (
+              <div key={i} className="card animate-pulse">
+                <div className="card-body">
+                  <div className="h-6 bg-gray-200 rounded mb-4"></div>
+                  <div className="h-4 bg-gray-200 rounded mb-2"></div>
+                  <div className="h-16 bg-gray-200 rounded"></div>
+                </div>
+              </div>
+            ))
+          ) : (
+            services.map((service) => (
             <div key={service.id} className="card hover:shadow-lg transition-shadow">
               <div className="card-body">
                 <div className="flex items-start justify-between">
@@ -232,7 +227,7 @@ export default function Services() {
                 <div className="mt-4 grid grid-cols-2 gap-4">
                   <div className="flex items-center space-x-2">
                     <Clock className="h-4 w-4 text-gray-400" />
-                    <span className="text-sm text-gray-600">{service.duration} min</span>
+                    <span className="text-sm text-gray-600">{service.duration_minutes} min</span>
                   </div>
                   <div className="flex items-center space-x-2">
                     <DollarSign className="h-4 w-4 text-gray-400" />
@@ -240,27 +235,28 @@ export default function Services() {
                   </div>
                   <div className="flex items-center space-x-2">
                     <Users className="h-4 w-4 text-gray-400" />
-                    <span className="text-sm text-gray-600">{service.staffCount} staff</span>
+                    <span className="text-sm text-gray-600">{service.staff_count} staff</span>
                   </div>
                   <div className="text-sm text-gray-600">
-                    {service.bookingsThisMonth} bookings
+                    {service.bookings_this_month} bookings
                   </div>
                 </div>
 
                 <div className="mt-4 flex items-center justify-between">
-                  <span className={`badge ${service.isActive ? 'badge-success' : 'badge bg-gray-100 text-gray-800'}`}>
-                    {service.isActive ? 'Active' : 'Inactive'}
+                  <span className={`badge ${service.is_active ? 'badge-success' : 'badge bg-gray-100 text-gray-800'}`}>
+                    {service.is_active ? 'Active' : 'Inactive'}
                   </span>
                   <span className="text-sm font-medium text-gray-900">
-                    ${(service.price * service.bookingsThisMonth).toLocaleString()} revenue
+                    ${(service.price * service.bookings_this_month).toLocaleString()} revenue
                   </span>
                 </div>
               </div>
             </div>
-          ))}
+            ))
+          )}
         </div>
 
-        {filteredServices.length === 0 && (
+        {!loading && services.length === 0 && (
           <div className="mt-8 text-center">
             <p className="text-gray-500">No services found matching your criteria.</p>
           </div>

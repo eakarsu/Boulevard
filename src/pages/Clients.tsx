@@ -1,77 +1,79 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { Search, Plus, Mail, Phone, Calendar, DollarSign, Star, Filter } from 'lucide-react'
+import { clientsAPI } from '../services/api'
 
-const mockClients = [
-  {
-    id: '1',
-    firstName: 'Sarah',
-    lastName: 'Johnson',
-    email: 'sarah.johnson@email.com',
-    phone: '+1 (555) 123-4567',
-    totalSpent: 1250,
-    lastVisit: '2024-01-15',
-    appointmentCount: 12,
-    loyaltyPoints: 150,
-    status: 'active',
-    notes: 'Prefers Emma as stylist, allergic to sulfates',
-  },
-  {
-    id: '2',
-    firstName: 'Michael',
-    lastName: 'Chen',
-    email: 'michael.chen@email.com',
-    phone: '+1 (555) 234-5678',
-    totalSpent: 890,
-    lastVisit: '2024-01-10',
-    appointmentCount: 8,
-    loyaltyPoints: 89,
-    status: 'active',
-    notes: 'Regular beard trim customer',
-  },
-  {
-    id: '3',
-    firstName: 'Lisa',
-    lastName: 'Anderson',
-    email: 'lisa.anderson@email.com',
-    phone: '+1 (555) 345-6789',
-    totalSpent: 2100,
-    lastVisit: '2024-01-08',
-    appointmentCount: 18,
-    loyaltyPoints: 210,
-    status: 'vip',
-    notes: 'VIP client, books monthly color appointments',
-  },
-  {
-    id: '4',
-    firstName: 'David',
-    lastName: 'Wilson',
-    email: 'david.wilson@email.com',
-    phone: '+1 (555) 456-7890',
-    totalSpent: 320,
-    lastVisit: '2023-12-20',
-    appointmentCount: 3,
-    loyaltyPoints: 32,
-    status: 'inactive',
-    notes: 'New client, referred by Sarah Johnson',
-  },
-]
+interface Client {
+  id: string
+  first_name: string
+  last_name: string
+  email: string
+  phone: string
+  total_spent: number
+  last_visit: string
+  appointment_count: number
+  status: string
+  notes?: string
+}
+
+interface ClientStats {
+  total_clients: number
+  active_clients: number
+  vip_clients: number
+  total_revenue: number
+}
 
 export default function Clients() {
   const [searchTerm, setSearchTerm] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
-  const [selectedClient, setSelectedClient] = useState<string | null>(null)
-
-  const filteredClients = mockClients.filter(client => {
-    const matchesSearch = 
-      client.firstName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      client.lastName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      client.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      client.phone.includes(searchTerm)
-    
-    const matchesStatus = statusFilter === 'all' || client.status === statusFilter
-    
-    return matchesSearch && matchesStatus
+  const [clients, setClients] = useState<Client[]>([])
+  const [stats, setStats] = useState<ClientStats>({
+    total_clients: 0,
+    active_clients: 0,
+    vip_clients: 0,
+    total_revenue: 0
   })
+  const [loading, setLoading] = useState(true)
+  const [currentPage, setCurrentPage] = useState(1)
+  const [totalPages, setTotalPages] = useState(1)
+
+  useEffect(() => {
+    fetchClients()
+    fetchStats()
+  }, [searchTerm, statusFilter, currentPage])
+
+  const fetchClients = async () => {
+    try {
+      setLoading(true)
+      const params = {
+        search: searchTerm || undefined,
+        status: statusFilter !== 'all' ? statusFilter : undefined,
+        page: currentPage,
+        limit: 50
+      }
+      
+      const response = await clientsAPI.getClients(params)
+      setClients(response.data.clients || [])
+      setTotalPages(response.data.totalPages || 1)
+    } catch (error) {
+      console.error('Error fetching clients:', error)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const fetchStats = async () => {
+    try {
+      const response = await clientsAPI.getClientStats()
+      setStats(response.data || {
+        total_clients: 0,
+        active_clients: 0,
+        vip_clients: 0,
+        total_revenue: 0
+      })
+    } catch (error) {
+      console.error('Error fetching client stats:', error)
+    }
+  }
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -137,7 +139,7 @@ export default function Clients() {
                 </div>
                 <div className="ml-4">
                   <p className="text-sm font-medium text-gray-500">Total Clients</p>
-                  <p className="text-2xl font-semibold text-gray-900">{mockClients.length}</p>
+                  <p className="text-2xl font-semibold text-gray-900">{stats.total_clients}</p>
                 </div>
               </div>
             </div>
@@ -153,9 +155,7 @@ export default function Clients() {
                 </div>
                 <div className="ml-4">
                   <p className="text-sm font-medium text-gray-500">Active Clients</p>
-                  <p className="text-2xl font-semibold text-gray-900">
-                    {mockClients.filter(c => c.status === 'active' || c.status === 'vip').length}
-                  </p>
+                  <p className="text-2xl font-semibold text-gray-900">{stats.active_clients}</p>
                 </div>
               </div>
             </div>
@@ -171,9 +171,7 @@ export default function Clients() {
                 </div>
                 <div className="ml-4">
                   <p className="text-sm font-medium text-gray-500">VIP Clients</p>
-                  <p className="text-2xl font-semibold text-gray-900">
-                    {mockClients.filter(c => c.status === 'vip').length}
-                  </p>
+                  <p className="text-2xl font-semibold text-gray-900">{stats.vip_clients}</p>
                 </div>
               </div>
             </div>
@@ -190,7 +188,7 @@ export default function Clients() {
                 <div className="ml-4">
                   <p className="text-sm font-medium text-gray-500">Total Revenue</p>
                   <p className="text-2xl font-semibold text-gray-900">
-                    ${mockClients.reduce((sum, c) => sum + c.totalSpent, 0).toLocaleString()}
+                    ${stats.total_revenue.toLocaleString()}
                   </p>
                 </div>
               </div>
@@ -229,7 +227,34 @@ export default function Clients() {
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
-                  {filteredClients.map((client) => (
+                  {loading ? (
+                    [...Array(5)].map((_, i) => (
+                      <tr key={i} className="animate-pulse">
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="h-10 bg-gray-200 rounded"></div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="h-4 bg-gray-200 rounded"></div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="h-4 bg-gray-200 rounded"></div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="h-4 bg-gray-200 rounded"></div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="h-4 bg-gray-200 rounded"></div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="h-4 bg-gray-200 rounded"></div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="h-4 bg-gray-200 rounded"></div>
+                        </td>
+                      </tr>
+                    ))
+                  ) : (
+                    clients.map((client) => (
                     <tr key={client.id} className="hover:bg-gray-50">
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex items-center">
@@ -240,10 +265,10 @@ export default function Clients() {
                           </div>
                           <div className="ml-4">
                             <div className="text-sm font-medium text-gray-900">
-                              {client.firstName} {client.lastName}
+                              {client.first_name} {client.last_name}
                             </div>
                             <div className="text-sm text-gray-500">
-                              {client.loyaltyPoints} loyalty points
+                              ID: {client.id}
                             </div>
                           </div>
                         </div>
@@ -258,13 +283,13 @@ export default function Clients() {
                         </span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {client.appointmentCount}
+                        {client.appointment_count}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        ${client.totalSpent.toLocaleString()}
+                        ${client.total_spent.toLocaleString()}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {new Date(client.lastVisit).toLocaleDateString()}
+                        {client.last_visit ? new Date(client.last_visit).toLocaleDateString() : 'Never'}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                         <div className="flex space-x-2">
