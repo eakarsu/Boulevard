@@ -17,8 +17,8 @@ router.post('/cart/create', async (req, res) => {
 
     // Create cart
     const cartResult = await query(`
-      INSERT INTO boulevard_carts (cart_uuid, location_id)
-      VALUES ($1, $2)
+      INSERT INTO boulevard_carts (cart_uuid, location_id, payment_info_required, gift_card_purchase_enabled)
+      VALUES ($1, $2, false, false)
       RETURNING id, cart_uuid, payment_info_required, gift_card_purchase_enabled
     `, [cartUuid, locationId])
 

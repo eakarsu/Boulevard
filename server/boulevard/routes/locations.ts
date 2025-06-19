@@ -19,7 +19,7 @@ router.get('/business/locations', async (req, res) => {
         l.address_state as "addressState",
         l.address_zip as "addressZip"
       FROM boulevard_locations l
-      JOIN boulevard_businesses b ON l.business_id = b.id
+      LEFT JOIN boulevard_businesses b ON l.business_id = b.id
       ORDER BY l.name
       LIMIT $1
     `, [first])
