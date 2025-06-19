@@ -46,15 +46,17 @@ export default function Dashboard() {
           staffAPI.getStaffStats()
         ])
         
-        const todayAppointments = appointmentsRes.data || []
+        console.log('API responses:', { appointmentsRes, clientStatsRes, serviceStatsRes, staffStatsRes })
+        
+        const todayAppointments = Array.isArray(appointmentsRes.data) ? appointmentsRes.data : []
         const clientStats = clientStatsRes.data || {}
         const serviceStats = serviceStatsRes.data || {}
         
-        // Calculate stats
+        // Calculate stats with proper fallbacks
         setStats({
-          totalRevenue: serviceStats.monthly_revenue || 0,
+          totalRevenue: Number(serviceStats.monthly_revenue) || 0,
           appointmentsToday: todayAppointments.length,
-          newClients: clientStats.total_clients || 0,
+          newClients: Number(clientStats.total_clients) || 0,
           avgServiceTime: 45 // This would need to be calculated from actual data
         })
         
@@ -74,28 +76,28 @@ export default function Dashboard() {
   const statsConfig = [
     {
       name: 'Total Revenue',
-      value: `$${stats.totalRevenue.toLocaleString()}`,
+      value: `$${(stats.totalRevenue || 0).toLocaleString()}`,
       change: '+12%', // This would need historical data to calculate
       changeType: 'increase' as const,
       icon: DollarSign,
     },
     {
       name: 'Appointments Today',
-      value: stats.appointmentsToday.toString(),
+      value: (stats.appointmentsToday || 0).toString(),
       change: '+3', // This would need historical data to calculate
       changeType: 'increase' as const,
       icon: Calendar,
     },
     {
       name: 'New Clients',
-      value: stats.newClients.toString(),
+      value: (stats.newClients || 0).toString(),
       change: '+2', // This would need historical data to calculate
       changeType: 'increase' as const,
       icon: Users,
     },
     {
       name: 'Avg. Service Time',
-      value: `${stats.avgServiceTime}min`,
+      value: `${stats.avgServiceTime || 0}min`,
       change: '-5min', // This would need historical data to calculate
       changeType: 'decrease' as const,
       icon: Clock,
@@ -190,39 +192,45 @@ export default function Dashboard() {
             <div className="card-body">
               <div className="flow-root">
                 <ul className="-my-5 divide-y divide-gray-200">
-                  {recentAppointments.map((appointment) => (
-                    <li key={appointment.id} className="py-4">
-                      <div className="flex items-center space-x-4">
-                        <div className="flex-shrink-0">
-                          <div className="h-8 w-8 rounded-full bg-primary-500 flex items-center justify-center">
-                            <span className="text-sm font-medium text-white">
-                              {appointment.client.split(' ').map(n => n[0]).join('')}
+                  {recentAppointments.length > 0 ? (
+                    recentAppointments.map((appointment) => (
+                      <li key={appointment.id} className="py-4">
+                        <div className="flex items-center space-x-4">
+                          <div className="flex-shrink-0">
+                            <div className="h-8 w-8 rounded-full bg-primary-500 flex items-center justify-center">
+                              <span className="text-sm font-medium text-white">
+                                {appointment.clientName ? appointment.clientName.split(' ').map(n => n[0]).join('') : 'N/A'}
+                              </span>
+                            </div>
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium text-gray-900 truncate">
+                              {appointment.clientName || 'Unknown Client'}
+                            </p>
+                            <p className="text-sm text-gray-500 truncate">
+                              {appointment.service || 'Unknown Service'} • {appointment.staff || 'Unknown Staff'}
+                            </p>
+                          </div>
+                          <div className="flex-shrink-0 text-sm text-gray-500">
+                            {appointment.startTime || 'No time'}
+                          </div>
+                          <div className="flex-shrink-0">
+                            <span className={`badge ${
+                              appointment.status === 'confirmed' ? 'badge-success' :
+                              appointment.status === 'in_progress' ? 'badge-warning' :
+                              'badge-info'
+                            }`}>
+                              {appointment.status ? appointment.status.replace('_', ' ') : 'unknown'}
                             </span>
                           </div>
                         </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium text-gray-900 truncate">
-                            {appointment.client}
-                          </p>
-                          <p className="text-sm text-gray-500 truncate">
-                            {appointment.service} • {appointment.staff}
-                          </p>
-                        </div>
-                        <div className="flex-shrink-0 text-sm text-gray-500">
-                          {appointment.time}
-                        </div>
-                        <div className="flex-shrink-0">
-                          <span className={`badge ${
-                            appointment.status === 'confirmed' ? 'badge-success' :
-                            appointment.status === 'in_progress' ? 'badge-warning' :
-                            'badge-info'
-                          }`}>
-                            {appointment.status.replace('_', ' ')}
-                          </span>
-                        </div>
-                      </div>
+                      </li>
+                    ))
+                  ) : (
+                    <li className="py-4 text-center text-gray-500">
+                      No appointments scheduled for today
                     </li>
-                  ))}
+                  )}
                 </ul>
               </div>
             </div>
