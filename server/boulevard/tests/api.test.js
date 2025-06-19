@@ -258,9 +258,11 @@ describe('Boulevard API Integration Tests', () => {
     it('should add card payment method to database', async () => {
       const res = await api.post('/api/boulevard/add-cart-card-payment-method')
         .send({
-          id: cartId,
-          token: 'test_token_123',
-          select: true
+          input: {
+            id: cartId,
+            token: 'test_token_123',
+            select: true
+          }
         })
         .expect(200)
 
@@ -668,16 +670,19 @@ describe('Boulevard API Integration Tests', () => {
 
       it('should handle date range parameters', async () => {
         const lowerBound = '2025-06-25'
-        const upperBound = '2025-06-30T23:59:59'
+        const upperBound = '2025-06-30'
         
         const res = await api.get(`/api/boulevard/cart/${testCartId}/bookable-dates?searchRangeLower=${lowerBound}&searchRangeUpper=${upperBound}`)
           .expect(200)
 
-        // Verify all dates are within range
+        // Verify all dates are within range (allowing for timezone differences)
         res.body.data.cartBookableDates.forEach(dateObj => {
           const date = new Date(dateObj.date)
-          expect(date).to.be.at.least(new Date(lowerBound))
-          expect(date).to.be.at.most(new Date(upperBound))
+          const lowerDate = new Date(lowerBound)
+          const upperDate = new Date(upperBound + 'T23:59:59.999Z')
+          
+          expect(date).to.be.at.least(lowerDate)
+          expect(date).to.be.at.most(upperDate)
         })
       })
 
