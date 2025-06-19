@@ -63,10 +63,14 @@ export default function Calendar() {
       console.log('Setting appointments:', transformedAppointments.length, 'appointments')
       if (transformedAppointments.length > 0) {
         console.log('First appointment:', transformedAppointments[0])
-        console.log('First appointment date object:', transformedAppointments[0].date)
-        console.log('First appointment date string:', transformedAppointments[0].date.toDateString())
-        console.log('Current week start:', weekStart.toDateString())
+        console.log('First appointment date:', transformedAppointments[0].date.toDateString())
         console.log('Current week dates:', weekDates.map(d => d.toDateString()))
+        
+        // Debug: Check if any appointments match current week
+        const matchingAppointments = transformedAppointments.filter(apt => 
+          weekDates.some(weekDate => apt.date.toDateString() === weekDate.toDateString())
+        )
+        console.log('Appointments matching current week:', matchingAppointments.length)
       }
       setAppointments(transformedAppointments)
     } catch (error) {
@@ -94,12 +98,27 @@ export default function Calendar() {
 
   const getAppointmentsForDate = (date: Date) => {
     const filtered = appointments.filter(apt => {
+      // Ensure we're working with proper Date objects
       const aptDate = new Date(apt.date)
-      const matches = isSameDay(aptDate, date)
-      console.log(`Checking appointment ${apt.id}: ${aptDate.toDateString()} vs ${date.toDateString()} = ${matches}`)
+      const targetDate = new Date(date)
+      
+      // Compare just the date parts (ignore time)
+      const aptDateStr = aptDate.toDateString()
+      const targetDateStr = targetDate.toDateString()
+      
+      const matches = aptDateStr === targetDateStr
+      
+      if (matches) {
+        console.log(`✓ Found appointment ${apt.id} for ${targetDateStr}`)
+      }
+      
       return matches
     })
-    console.log(`Appointments for ${date.toDateString()}:`, filtered.length)
+    
+    if (filtered.length > 0) {
+      console.log(`Found ${filtered.length} appointments for ${date.toDateString()}`)
+    }
+    
     return filtered
   }
 
