@@ -1,0 +1,16 @@
+{
+  "name": "boulevard-api-tests",
+  "version": "1.0.0",
+  "description": "Test suite for Boulevard API clone",
+  "type": "module",
+  "scripts": {
+    "test": "mocha tests/api.test.js --timeout 10000",
+    "test:watch": "mocha tests/api.test.js --timeout 10000 --watch",
+    "test:verbose": "mocha tests/api.test.js --timeout 10000 --reporter spec"
+  },
+  "devDependencies": {
+    "mocha": "^10.2.0",
+    "chai": "^4.3.10",
+    "supertest": "^6.3.3"
+  }
+}
