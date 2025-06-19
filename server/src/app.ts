@@ -223,47 +223,56 @@ app.post('/api/debug/seed', async (req, res) => {
   try {
     const { query } = await import('./config/database.js')
     
-    // Check if we already have data - but allow re-seeding staff if missing
-    const userCheck = await query('SELECT COUNT(*) as count FROM users')
-    const staffCheck = await query('SELECT COUNT(*) as count FROM staff')
+    // Get existing business owner user and business
+    let userResult = await query(`SELECT id FROM users WHERE email = 'john@example.com'`)
+    let userId
+    let businessId
     
-    if (parseInt(userCheck.rows[0].count) > 0 && parseInt(staffCheck.rows[0].count) > 0) {
-      return res.json({ message: 'Sample data already exists' })
+    if (userResult.rows.length === 0) {
+      // Create sample user if doesn't exist
+      userResult = await query(`
+        INSERT INTO users (email, password_hash, first_name, last_name, phone, role)
+        VALUES ('john@example.com', '$2b$10$defaulthash', 'John', 'Doe', '+1234567890', 'business_owner')
+        RETURNING id
+      `)
+      userId = userResult.rows[0].id
+      
+      // Create sample business
+      const businessResult = await query(`
+        INSERT INTO businesses (owner_id, name, description, phone, email)
+        VALUES ($1, 'Sample Salon', 'A beautiful salon', '+1234567890', 'salon@example.com')
+        RETURNING id
+      `, [userId])
+      businessId = businessResult.rows[0].id
+      
+      // Create sample clients
+      await query(`
+        INSERT INTO clients (business_id, first_name, last_name, email, phone, total_spent, last_visit)
+        VALUES 
+          ($1, 'Sarah', 'Johnson', 'sarah@example.com', '+1111111111', 1250, '2024-01-15'),
+          ($1, 'Michael', 'Chen', 'michael@example.com', '+2222222222', 890, '2024-01-10'),
+          ($1, 'Lisa', 'Anderson', 'lisa@example.com', '+3333333333', 2100, '2024-01-08')
+      `, [businessId])
+      
+      // Create sample services
+      await query(`
+        INSERT INTO services (business_id, name, description, category, duration_minutes, price, color, is_active)
+        VALUES 
+          ($1, 'Haircut & Style', 'Professional haircut with wash and style', 'Hair', 60, 85, '#3B82F6', true),
+          ($1, 'Color & Highlights', 'Full color service with highlights', 'Hair', 120, 150, '#8B5CF6', true),
+          ($1, 'Beard Trim', 'Professional beard trimming', 'Grooming', 30, 35, '#10B981', true)
+      `, [businessId])
+    } else {
+      userId = userResult.rows[0].id
+      
+      // Get existing business
+      const businessResult = await query(`SELECT id FROM businesses WHERE owner_id = $1`, [userId])
+      if (businessResult.rows.length > 0) {
+        businessId = businessResult.rows[0].id
+      } else {
+        return res.status(500).json({ error: 'User exists but no business found' })
+      }
     }
-    
-    // Create sample user
-    const userResult = await query(`
-      INSERT INTO users (email, password_hash, first_name, last_name, phone, role)
-      VALUES ('john@example.com', '$2b$10$defaulthash', 'John', 'Doe', '+1234567890', 'business_owner')
-      RETURNING id
-    `)
-    const userId = userResult.rows[0].id
-    
-    // Create sample business
-    const businessResult = await query(`
-      INSERT INTO businesses (owner_id, name, description, phone, email)
-      VALUES ($1, 'Sample Salon', 'A beautiful salon', '+1234567890', 'salon@example.com')
-      RETURNING id
-    `, [userId])
-    const businessId = businessResult.rows[0].id
-    
-    // Create sample clients
-    await query(`
-      INSERT INTO clients (business_id, first_name, last_name, email, phone, total_spent, last_visit)
-      VALUES 
-        ($1, 'Sarah', 'Johnson', 'sarah@example.com', '+1111111111', 1250, '2024-01-15'),
-        ($1, 'Michael', 'Chen', 'michael@example.com', '+2222222222', 890, '2024-01-10'),
-        ($1, 'Lisa', 'Anderson', 'lisa@example.com', '+3333333333', 2100, '2024-01-08')
-    `, [businessId])
-    
-    // Create sample services
-    await query(`
-      INSERT INTO services (business_id, name, description, category, duration_minutes, price, color, is_active)
-      VALUES 
-        ($1, 'Haircut & Style', 'Professional haircut with wash and style', 'Hair', 60, 85, '#3B82F6', true),
-        ($1, 'Color & Highlights', 'Full color service with highlights', 'Hair', 120, 150, '#8B5CF6', true),
-        ($1, 'Beard Trim', 'Professional beard trimming', 'Grooming', 30, 35, '#10B981', true)
-    `, [businessId])
     
     // Create sample staff
     const staffUserResult = await query(`
