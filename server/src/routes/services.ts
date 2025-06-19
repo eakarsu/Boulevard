@@ -8,8 +8,26 @@ router.get('/', async (req: any, res) => {
   try {
     const { search, category } = req.query
     
+    if (!req.user) {
+      return res.status(401).json({ error: 'User not authenticated' })
+    }
+    
+    // If businessId is not set, try to get it from the user's business ownership
+    let businessId = req.user.businessId
+    if (!businessId) {
+      const businessResult = await query(
+        'SELECT id FROM businesses WHERE owner_id = $1 LIMIT 1',
+        [req.user.id]
+      )
+      if (businessResult.rows.length > 0) {
+        businessId = businessResult.rows[0].id
+      } else {
+        return res.status(404).json({ error: 'No business found for user' })
+      }
+    }
+    
     let whereClause = 'WHERE s.business_id = $1'
-    const params = [req.user.businessId]
+    const params = [businessId]
     let paramCount = 1
 
     if (search) {
@@ -50,6 +68,24 @@ router.get('/', async (req: any, res) => {
 // Get service statistics
 router.get('/stats', async (req: any, res) => {
   try {
+    if (!req.user) {
+      return res.status(401).json({ error: 'User not authenticated' })
+    }
+    
+    // If businessId is not set, try to get it from the user's business ownership
+    let businessId = req.user.businessId
+    if (!businessId) {
+      const businessResult = await query(
+        'SELECT id FROM businesses WHERE owner_id = $1 LIMIT 1',
+        [req.user.id]
+      )
+      if (businessResult.rows.length > 0) {
+        businessId = businessResult.rows[0].id
+      } else {
+        return res.status(404).json({ error: 'No business found for user' })
+      }
+    }
+    
     const statsQuery = `
       SELECT 
         COUNT(*) as total_services,
@@ -67,7 +103,7 @@ router.get('/stats', async (req: any, res) => {
       WHERE s.business_id = $1
     `
     
-    const result = await query(statsQuery, [req.user.businessId])
+    const result = await query(statsQuery, [businessId])
     res.json({ data: result.rows[0] })
   } catch (error) {
     console.error('Error fetching service stats:', error)
