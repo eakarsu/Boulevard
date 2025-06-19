@@ -1,0 +1,123 @@
+import express from 'express'
+import { query } from '../config/database.js'
+
+const router = express.Router()
+
+// Get all services for a business
+router.get('/', async (req: any, res) => {
+  try {
+    const { search, category } = req.query
+    
+    let whereClause = 'WHERE s.business_id = $1'
+    const params = [req.user.businessId]
+    let paramCount = 1
+
+    if (search) {
+      paramCount++
+      whereClause += ` AND (s.name ILIKE $${paramCount} OR s.description ILIKE $${paramCount})`
+      params.push(`%${search}%`)
+    }
+
+    if (category && category !== 'All') {
+      paramCount++
+      whereClause += ` AND s.category = $${paramCount}`
+      params.push(category)
+    }
+
+    const servicesQuery = `
+      SELECT 
+        s.*,
+        COUNT(DISTINCT ss.staff_id) as staff_count,
+        COUNT(CASE WHEN a.start_time >= DATE_TRUNC('month', CURRENT_DATE) 
+                   AND a.start_time < DATE_TRUNC('month', CURRENT_DATE) + INTERVAL '1 month' 
+                   THEN 1 END) as bookings_this_month
+      FROM services s
+      LEFT JOIN staff_services ss ON s.id = ss.service_id
+      LEFT JOIN appointments a ON s.id = a.service_id
+      ${whereClause}
+      GROUP BY s.id
+      ORDER BY s.name
+    `
+    
+    const result = await query(servicesQuery, params)
+    res.json(result.rows)
+  } catch (error) {
+    console.error('Error fetching services:', error)
+    res.status(500).json({ error: 'Failed to fetch services' })
+  }
+})
+
+// Get service statistics
+router.get('/stats', async (req: any, res) => {
+  try {
+    const statsQuery = `
+      SELECT 
+        COUNT(*) as total_services,
+        COUNT(CASE WHEN is_active = true THEN 1 END) as active_services,
+        COALESCE(SUM(
+          CASE WHEN a.start_time >= DATE_TRUNC('month', CURRENT_DATE) 
+               AND a.start_time < DATE_TRUNC('month', CURRENT_DATE) + INTERVAL '1 month' 
+               THEN s.price ELSE 0 END
+        ), 0) as monthly_revenue,
+        COUNT(CASE WHEN a.start_time >= DATE_TRUNC('month', CURRENT_DATE) 
+                   AND a.start_time < DATE_TRUNC('month', CURRENT_DATE) + INTERVAL '1 month' 
+                   THEN 1 END) as total_bookings
+      FROM services s
+      LEFT JOIN appointments a ON s.id = a.service_id
+      WHERE s.business_id = $1
+    `
+    
+    const result = await query(statsQuery, [req.user.businessId])
+    res.json(result.rows[0])
+  } catch (error) {
+    console.error('Error fetching service stats:', error)
+    res.status(500).json({ error: 'Failed to fetch service statistics' })
+  }
+})
+
+// Create new service
+router.post('/', async (req: any, res) => {
+  try {
+    const { name, description, category, duration_minutes, price, color } = req.body
+    
+    const result = await query(
+      `INSERT INTO services (business_id, name, description, category, duration_minutes, price, color)
+       VALUES ($1, $2, $3, $4, $5, $6, $7)
+       RETURNING *`,
+      [req.user.businessId, name, description, category, duration_minutes, price, color]
+    )
+    
+    res.status(201).json(result.rows[0])
+  } catch (error) {
+    console.error('Error creating service:', error)
+    res.status(500).json({ error: 'Failed to create service' })
+  }
+})
+
+// Update service
+router.put('/:id', async (req: any, res) => {
+  try {
+    const { id } = req.params
+    const { name, description, category, duration_minutes, price, color, is_active } = req.body
+    
+    const result = await query(
+      `UPDATE services 
+       SET name = $1, description = $2, category = $3, duration_minutes = $4, 
+           price = $5, color = $6, is_active = $7, updated_at = CURRENT_TIMESTAMP
+       WHERE id = $8 AND business_id = $9
+       RETURNING *`,
+      [name, description, category, duration_minutes, price, color, is_active, id, req.user.businessId]
+    )
+    
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Service not found' })
+    }
+    
+    res.json(result.rows[0])
+  } catch (error) {
+    console.error('Error updating service:', error)
+    res.status(500).json({ error: 'Failed to update service' })
+  }
+})
+
+export default router
