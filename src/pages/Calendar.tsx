@@ -46,7 +46,8 @@ export default function Calendar() {
       })
       
       // Transform the data to match our component interface
-      const transformedAppointments = (response.data || []).map((apt: any) => ({
+      const appointmentsData = Array.isArray(response.data) ? response.data : []
+      const transformedAppointments = appointmentsData.map((apt: any) => ({
         id: apt.id,
         clientName: apt.clientName,
         service: apt.service,
