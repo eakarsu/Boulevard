@@ -63,6 +63,10 @@ export default function Calendar() {
       console.log('Setting appointments:', transformedAppointments.length, 'appointments')
       if (transformedAppointments.length > 0) {
         console.log('First appointment:', transformedAppointments[0])
+        console.log('First appointment date object:', transformedAppointments[0].date)
+        console.log('First appointment date string:', transformedAppointments[0].date.toDateString())
+        console.log('Current week start:', weekStart.toDateString())
+        console.log('Current week dates:', weekDates.map(d => d.toDateString()))
       }
       setAppointments(transformedAppointments)
     } catch (error) {
