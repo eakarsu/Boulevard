@@ -50,17 +50,21 @@ export default function Calendar() {
       console.log('Appointments data structure:', response.data)
       const appointmentsData = Array.isArray(response.data) ? response.data : []
       console.log('Appointments array:', appointmentsData)
-      const transformedAppointments = appointmentsData.map((apt: any) => ({
-        id: apt.id,
-        clientName: apt.clientName || 'Unknown Client',
-        service: apt.service || 'Unknown Service',
-        staff: apt.staff || 'Unknown Staff',
-        startTime: apt.startTime || '00:00',
-        endTime: apt.endTime || '00:00',
-        date: new Date(apt.date),
-        status: apt.status,
-        color: apt.color || getStatusColor(apt.status)
-      }))
+      const transformedAppointments = appointmentsData.map((apt: any) => {
+        const transformed = {
+          id: apt.id,
+          clientName: apt.clientName || 'Unknown Client',
+          service: apt.service || 'Unknown Service',
+          staff: apt.staff || 'Unknown Staff',
+          startTime: apt.startTime || '00:00',
+          endTime: apt.endTime || '00:00',
+          date: new Date(apt.date),
+          status: apt.status,
+          color: apt.color || getStatusColor(apt.status)
+        }
+        console.log('Transformed appointment:', transformed)
+        return transformed
+      })
       
       setAppointments(transformedAppointments)
     } catch (error) {
