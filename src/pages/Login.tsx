@@ -47,6 +47,11 @@ export default function Login() {
               create a new account
             </Link>
           </p>
+          <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-md">
+            <p className="text-sm text-blue-800">
+              <strong>Demo Mode:</strong> Use any email and password to login (e.g., test@example.com / password123)
+            </p>
+          </div>
         </div>
         <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
           <div className="rounded-md shadow-sm -space-y-px">
