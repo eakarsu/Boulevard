@@ -55,9 +55,10 @@ export default function Staff() {
       }
       
       const response = await staffAPI.getStaff(params)
-      setStaff(response.data || [])
+      setStaff(Array.isArray(response.data?.data) ? response.data.data : [])
     } catch (error) {
       console.error('Error fetching staff:', error)
+      setStaff([])
     } finally {
       setLoading(false)
     }
@@ -66,7 +67,7 @@ export default function Staff() {
   const fetchStats = async () => {
     try {
       const response = await staffAPI.getStaffStats()
-      setStats(response.data || {
+      setStats(response.data?.data || {
         total_staff: 0,
         active_staff: 0,
         weekly_revenue: 0,
@@ -74,6 +75,12 @@ export default function Staff() {
       })
     } catch (error) {
       console.error('Error fetching staff stats:', error)
+      setStats({
+        total_staff: 0,
+        active_staff: 0,
+        weekly_revenue: 0,
+        weekly_appointments: 0
+      })
     }
   }
 
@@ -211,7 +218,7 @@ export default function Staff() {
               </div>
             ))
           ) : (
-            staff.map((staffMember) => (
+            Array.isArray(staff) && staff.map((staffMember) => (
             <div key={staffMember.id} className="card hover:shadow-lg transition-shadow">
               <div className="card-body">
                 <div className="flex items-start justify-between">
