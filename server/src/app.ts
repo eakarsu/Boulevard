@@ -247,11 +247,18 @@ app.post('/api/debug/seed', async (req, res) => {
       
       // Create sample clients
       await query(`
-        INSERT INTO clients (business_id, first_name, last_name, email, phone, total_spent, last_visit)
+        INSERT INTO clients (business_id, first_name, last_name, email, phone, total_spent, last_visit, appointment_count)
         VALUES 
-          ($1, 'Sarah', 'Johnson', 'sarah@example.com', '+1111111111', 1250, '2024-01-15'),
-          ($1, 'Michael', 'Chen', 'michael@example.com', '+2222222222', 890, '2024-01-10'),
-          ($1, 'Lisa', 'Anderson', 'lisa@example.com', '+3333333333', 2100, '2024-01-08')
+          ($1, 'Sarah', 'Johnson', 'sarah@example.com', '+1111111111', 1250, '2024-06-15', 8),
+          ($1, 'Michael', 'Chen', 'michael@example.com', '+2222222222', 890, '2024-06-10', 5),
+          ($1, 'Lisa', 'Anderson', 'lisa@example.com', '+3333333333', 2100, '2024-06-08', 12),
+          ($1, 'Emma', 'Wilson', 'emma@example.com', '+1444444444', 675, '2024-06-12', 4),
+          ($1, 'David', 'Brown', 'david@example.com', '+1555555555', 1890, '2024-06-14', 9),
+          ($1, 'Jessica', 'Davis', 'jessica@example.com', '+1666666666', 420, '2024-06-05', 3),
+          ($1, 'Ryan', 'Miller', 'ryan@example.com', '+1777777777', 1560, '2024-06-11', 7),
+          ($1, 'Ashley', 'Garcia', 'ashley@example.com', '+1888888888', 980, '2024-06-13', 6),
+          ($1, 'Kevin', 'Martinez', 'kevin@example.com', '+1999999999', 1340, '2024-06-09', 8),
+          ($1, 'Sophia', 'Rodriguez', 'sophia@example.com', '+1000000000', 2250, '2024-06-16', 15)
       `, [businessId])
       
       // Create sample services
@@ -324,6 +331,76 @@ app.post('/api/debug/seed', async (req, res) => {
           INSERT INTO staff (business_id, user_id, title, skills, commission_rate, hourly_rate, is_active)
           VALUES ($1, $2, 'Junior Stylist', ARRAY['Hair Cutting', 'Styling'], 30, 20, true)
         `, [businessId, staffUser2Id])
+      }
+    }
+    
+    // Create sample appointments for calendar
+    const clientsResult = await query(`SELECT id FROM clients WHERE business_id = $1`, [businessId])
+    const servicesResult = await query(`SELECT id FROM services WHERE business_id = $1`, [businessId])
+    const staffResult = await query(`SELECT id FROM staff WHERE business_id = $1`, [businessId])
+    
+    if (clientsResult.rows.length > 0 && servicesResult.rows.length > 0 && staffResult.rows.length > 0) {
+      const clients = clientsResult.rows
+      const services = servicesResult.rows
+      const staff = staffResult.rows
+      
+      // Create appointments for the next 30 days
+      const appointments = []
+      const today = new Date()
+      
+      for (let i = 0; i < 30; i++) {
+        const appointmentDate = new Date(today)
+        appointmentDate.setDate(today.getDate() + i)
+        
+        // Skip weekends for this example
+        if (appointmentDate.getDay() === 0 || appointmentDate.getDay() === 6) continue
+        
+        // Create 3-8 appointments per day
+        const appointmentsPerDay = Math.floor(Math.random() * 6) + 3
+        
+        for (let j = 0; j < appointmentsPerDay; j++) {
+          const hour = Math.floor(Math.random() * 8) + 9 // 9 AM to 5 PM
+          const minute = Math.random() < 0.5 ? 0 : 30 // :00 or :30
+          
+          const startTime = new Date(appointmentDate)
+          startTime.setHours(hour, minute, 0, 0)
+          
+          const service = services[Math.floor(Math.random() * services.length)]
+          const client = clients[Math.floor(Math.random() * clients.length)]
+          const staffMember = staff[Math.floor(Math.random() * staff.length)]
+          
+          const endTime = new Date(startTime)
+          endTime.setMinutes(startTime.getMinutes() + 60) // Default 60 minutes
+          
+          const statuses = ['scheduled', 'confirmed', 'completed', 'cancelled']
+          const status = i < 0 ? 'completed' : statuses[Math.floor(Math.random() * 2)] // Past appointments are completed, future are scheduled/confirmed
+          
+          appointments.push([
+            businessId,
+            client.id,
+            staffMember.id,
+            service.id,
+            startTime.toISOString(),
+            endTime.toISOString(),
+            status,
+            85.00, // Default price
+            Math.random() < 0.3 ? 'Client requested specific styling' : null
+          ])
+        }
+      }
+      
+      // Insert appointments in batches
+      for (let i = 0; i < appointments.length; i += 10) {
+        const batch = appointments.slice(i, i + 10)
+        const values = batch.map((_, index) => {
+          const baseIndex = i * 9 + index * 9
+          return `($${baseIndex + 1}, $${baseIndex + 2}, $${baseIndex + 3}, $${baseIndex + 4}, $${baseIndex + 5}, $${baseIndex + 6}, $${baseIndex + 7}, $${baseIndex + 8}, $${baseIndex + 9})`
+        }).join(', ')
+        
+        await query(`
+          INSERT INTO appointments (business_id, client_id, staff_id, service_id, start_time, end_time, status, price, notes)
+          VALUES ${values}
+        `, batch.flat())
       }
     }
     
