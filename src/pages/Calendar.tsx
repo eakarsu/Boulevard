@@ -216,7 +216,7 @@ export default function Calendar() {
               ) : (
                 timeSlots.map((time, timeIndex) => (
                   <div key={time} className="grid grid-cols-8 border-b border-gray-100">
-                    <div className="p-4 text-sm text-gray-500 border-r border-gray-200">
+                    <div className="p-2 text-xs text-gray-500 border-r border-gray-200">
                       {time}
                     </div>
                     {weekDates.map((date, dateIndex) => {
@@ -237,23 +237,19 @@ export default function Calendar() {
                       return (
                         <div
                           key={`${date.toISOString()}-${time}`}
-                          className="relative p-2 border-l border-gray-200 min-h-[60px] hover:bg-gray-50"
+                          className="relative p-1 border-l border-gray-200 min-h-[40px] hover:bg-gray-50"
                         >
                           {timeAppointments.map((appointment) => (
                             <div
                               key={appointment.id}
-                              className="bg-blue-500 text-white p-2 rounded-md text-xs mb-1 cursor-pointer hover:opacity-90"
+                              className="bg-blue-500 text-white p-1 rounded text-xs mb-1 cursor-pointer hover:opacity-90"
                             >
-                              <div className="font-medium truncate">
+                              <div className="font-medium truncate text-xs">
                                 {appointment.clientName}
                               </div>
-                              <div className="flex items-center space-x-1 mt-1">
-                                <Clock className="h-3 w-3" />
-                                <span>{appointment.startTime}-{appointment.endTime}</span>
-                              </div>
                               <div className="flex items-center space-x-1">
-                                <User className="h-3 w-3" />
-                                <span className="truncate">{appointment.staff}</span>
+                                <Clock className="h-2 w-2" />
+                                <span className="text-xs">{appointment.startTime}</span>
                               </div>
                             </div>
                           ))}
