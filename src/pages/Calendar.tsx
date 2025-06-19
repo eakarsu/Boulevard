@@ -226,11 +226,13 @@ export default function Calendar() {
                         const aptHour = parseInt(apt.startTime.split(':')[0])
                         const slotHour = parseInt(time.split(':')[0])
                         const matches = aptHour === slotHour
-                        if (matches) {
-                          console.log(`Rendering appointment ${apt.id} at ${time}:`, apt)
-                        }
                         return matches
                       })
+                      
+                      // Debug: Log when we have appointments for this time slot
+                      if (timeAppointments.length > 0) {
+                        console.log(`Rendering ${timeAppointments.length} appointments at ${time} for ${date.toDateString()}:`, timeAppointments)
+                      }
                       
                       return (
                         <div
@@ -240,7 +242,7 @@ export default function Calendar() {
                           {timeAppointments.map((appointment) => (
                             <div
                               key={appointment.id}
-                              className={`${appointment.color} text-white p-2 rounded-md text-xs mb-1 cursor-pointer hover:opacity-90`}
+                              className="bg-blue-500 text-white p-2 rounded-md text-xs mb-1 cursor-pointer hover:opacity-90"
                             >
                               <div className="font-medium truncate">
                                 {appointment.clientName}
