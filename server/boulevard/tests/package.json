@@ -4,10 +4,10 @@
   "description": "Integration test suite for Boulevard API clone",
   "type": "module",
   "scripts": {
-    "test": "mocha api.test.js --timeout 15000",
-    "test:watch": "mocha api.test.js --timeout 15000 --watch",
-    "test:verbose": "mocha api.test.js --timeout 15000 --reporter spec",
-    "test:integration": "mocha api.test.js --timeout 15000 --grep 'Integration'"
+    "test": "mocha --timeout 15000 api.test.js",
+    "test:watch": "mocha --timeout 15000 --watch api.test.js",
+    "test:verbose": "mocha --timeout 15000 --reporter spec api.test.js",
+    "test:integration": "mocha --timeout 15000 --grep 'Integration' api.test.js"
   },
   "devDependencies": {
     "mocha": "^10.2.0",
