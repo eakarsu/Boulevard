@@ -45,12 +45,11 @@ router.get('/', async (req: any, res) => {
     const servicesQuery = `
       SELECT 
         s.*,
-        COUNT(DISTINCT ss.staff_id) as staff_count,
+        0 as staff_count,
         COUNT(CASE WHEN a.start_time >= DATE_TRUNC('month', CURRENT_DATE) 
                    AND a.start_time < DATE_TRUNC('month', CURRENT_DATE) + INTERVAL '1 month' 
                    THEN 1 END) as bookings_this_month
       FROM services s
-      LEFT JOIN staff_services ss ON s.id = ss.service_id
       LEFT JOIN appointments a ON s.id = a.service_id
       ${whereClause}
       GROUP BY s.id
@@ -93,7 +92,7 @@ router.get('/stats', async (req: any, res) => {
         COALESCE(SUM(
           CASE WHEN a.start_time >= DATE_TRUNC('month', CURRENT_DATE) 
                AND a.start_time < DATE_TRUNC('month', CURRENT_DATE) + INTERVAL '1 month' 
-               THEN s.price ELSE 0 END
+               THEN COALESCE(s.price, 0) ELSE 0 END
         ), 0) as monthly_revenue,
         COUNT(CASE WHEN a.start_time >= DATE_TRUNC('month', CURRENT_DATE) 
                    AND a.start_time < DATE_TRUNC('month', CURRENT_DATE) + INTERVAL '1 month' 

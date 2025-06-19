@@ -262,6 +262,19 @@ app.post('/api/debug/seed', async (req, res) => {
         ($1, 'Beard Trim', 'Professional beard trimming', 'Grooming', 30, 35, '#10B981', true)
     `, [businessId])
     
+    // Create sample staff
+    const staffUserResult = await query(`
+      INSERT INTO users (email, password_hash, first_name, last_name, phone, role)
+      VALUES ('staff@example.com', '$2b$10$defaulthash', 'Jane', 'Smith', '+1555555555', 'staff')
+      RETURNING id
+    `)
+    const staffUserId = staffUserResult.rows[0].id
+    
+    await query(`
+      INSERT INTO staff (business_id, user_id, title, skills, commission_rate, hourly_rate, is_active)
+      VALUES ($1, $2, 'Senior Stylist', ARRAY['Hair Cutting', 'Coloring'], 40, 25, true)
+    `, [businessId, staffUserId])
+    
     res.json({ message: 'Sample data created successfully', userId, businessId })
   } catch (error) {
     console.error('Error creating sample data:', error)

@@ -57,7 +57,7 @@ router.get('/', async (req: any, res) => {
         COALESCE(SUM(
           CASE WHEN a.start_time >= DATE_TRUNC('week', CURRENT_DATE) 
                AND a.start_time < DATE_TRUNC('week', CURRENT_DATE) + INTERVAL '1 week' 
-               THEN a.price * (s.commission_rate / 100) ELSE 0 END
+               THEN COALESCE(a.price, 0) * (COALESCE(s.commission_rate, 0) / 100) ELSE 0 END
         ), 0) as revenue,
         CASE 
           WHEN COUNT(CASE WHEN a.start_time::date = CURRENT_DATE AND a.status = 'in_progress' THEN 1 END) > 0 THEN 'Busy'
@@ -116,7 +116,7 @@ router.get('/stats', async (req: any, res) => {
         COALESCE(SUM(
           CASE WHEN a.start_time >= DATE_TRUNC('week', CURRENT_DATE) 
                AND a.start_time < DATE_TRUNC('week', CURRENT_DATE) + INTERVAL '1 week' 
-               THEN a.price * (s.commission_rate / 100) ELSE 0 END
+               THEN COALESCE(a.price, 0) * (COALESCE(s.commission_rate, 0) / 100) ELSE 0 END
         ), 0) as weekly_revenue,
         COUNT(CASE WHEN a.start_time >= DATE_TRUNC('week', CURRENT_DATE) 
                    AND a.start_time < DATE_TRUNC('week', CURRENT_DATE) + INTERVAL '1 week' 
