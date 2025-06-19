@@ -274,51 +274,58 @@ app.post('/api/debug/seed', async (req, res) => {
       }
     }
     
-    // Create sample staff
-    const staffUserResult = await query(`
-      INSERT INTO users (email, password_hash, first_name, last_name, phone, role)
-      VALUES ('staff@example.com', '$2b$10$defaulthash', 'Jane', 'Smith', '+1555555555', 'staff')
-      ON CONFLICT (email) DO UPDATE SET 
-        first_name = EXCLUDED.first_name,
-        last_name = EXCLUDED.last_name,
-        phone = EXCLUDED.phone
-      RETURNING id
-    `)
-    const staffUserId = staffUserResult.rows[0].id
+    // Check if staff already exists before creating
+    const existingStaff = await query(`SELECT COUNT(*) as count FROM staff WHERE business_id = $1`, [businessId])
     
-    await query(`
-      INSERT INTO staff (business_id, user_id, title, skills, commission_rate, hourly_rate, is_active)
-      VALUES ($1, $2, 'Senior Stylist', ARRAY['Hair Cutting', 'Coloring'], 40, 25, true)
-      ON CONFLICT (business_id, user_id) DO UPDATE SET
-        title = EXCLUDED.title,
-        skills = EXCLUDED.skills,
-        commission_rate = EXCLUDED.commission_rate,
-        hourly_rate = EXCLUDED.hourly_rate,
-        is_active = EXCLUDED.is_active
-    `, [businessId, staffUserId])
-    
-    // Create another staff member
-    const staffUser2Result = await query(`
-      INSERT INTO users (email, password_hash, first_name, last_name, phone, role)
-      VALUES ('staff2@example.com', '$2b$10$defaulthash', 'Mike', 'Johnson', '+1666666666', 'staff')
-      ON CONFLICT (email) DO UPDATE SET 
-        first_name = EXCLUDED.first_name,
-        last_name = EXCLUDED.last_name,
-        phone = EXCLUDED.phone
-      RETURNING id
-    `)
-    const staffUser2Id = staffUser2Result.rows[0].id
-    
-    await query(`
-      INSERT INTO staff (business_id, user_id, title, skills, commission_rate, hourly_rate, is_active)
-      VALUES ($1, $2, 'Junior Stylist', ARRAY['Hair Cutting', 'Styling'], 30, 20, true)
-      ON CONFLICT (business_id, user_id) DO UPDATE SET
-        title = EXCLUDED.title,
-        skills = EXCLUDED.skills,
-        commission_rate = EXCLUDED.commission_rate,
-        hourly_rate = EXCLUDED.hourly_rate,
-        is_active = EXCLUDED.is_active
-    `, [businessId, staffUser2Id])
+    if (parseInt(existingStaff.rows[0].count) === 0) {
+      // Create sample staff
+      const staffUserResult = await query(`
+        INSERT INTO users (email, password_hash, first_name, last_name, phone, role)
+        VALUES ('staff@example.com', '$2b$10$defaulthash', 'Jane', 'Smith', '+1555555555', 'staff')
+        ON CONFLICT (email) DO UPDATE SET 
+          first_name = EXCLUDED.first_name,
+          last_name = EXCLUDED.last_name,
+          phone = EXCLUDED.phone
+        RETURNING id
+      `)
+      const staffUserId = staffUserResult.rows[0].id
+      
+      // Check if staff record already exists
+      const existingStaffRecord = await query(`
+        SELECT id FROM staff WHERE business_id = $1 AND user_id = $2
+      `, [businessId, staffUserId])
+      
+      if (existingStaffRecord.rows.length === 0) {
+        await query(`
+          INSERT INTO staff (business_id, user_id, title, skills, commission_rate, hourly_rate, is_active)
+          VALUES ($1, $2, 'Senior Stylist', ARRAY['Hair Cutting', 'Coloring'], 40, 25, true)
+        `, [businessId, staffUserId])
+      }
+      
+      // Create another staff member
+      const staffUser2Result = await query(`
+        INSERT INTO users (email, password_hash, first_name, last_name, phone, role)
+        VALUES ('staff2@example.com', '$2b$10$defaulthash', 'Mike', 'Johnson', '+1666666666', 'staff')
+        ON CONFLICT (email) DO UPDATE SET 
+          first_name = EXCLUDED.first_name,
+          last_name = EXCLUDED.last_name,
+          phone = EXCLUDED.phone
+        RETURNING id
+      `)
+      const staffUser2Id = staffUser2Result.rows[0].id
+      
+      // Check if staff record already exists
+      const existingStaff2Record = await query(`
+        SELECT id FROM staff WHERE business_id = $1 AND user_id = $2
+      `, [businessId, staffUser2Id])
+      
+      if (existingStaff2Record.rows.length === 0) {
+        await query(`
+          INSERT INTO staff (business_id, user_id, title, skills, commission_rate, hourly_rate, is_active)
+          VALUES ($1, $2, 'Junior Stylist', ARRAY['Hair Cutting', 'Styling'], 30, 20, true)
+        `, [businessId, staffUser2Id])
+      }
+    }
     
     res.json({ message: 'Sample data created successfully', userId, businessId })
   } catch (error) {
