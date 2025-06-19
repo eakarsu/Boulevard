@@ -52,7 +52,9 @@ export default function Clients() {
       }
       
       const response = await clientsAPI.getClients(params)
-      console.log('Clients API response:', response.data)
+      console.log('Clients API response:', response)
+      console.log('Clients data structure:', response.data)
+      console.log('Clients array:', response.data?.clients)
       setClients(Array.isArray(response.data?.clients) ? response.data.clients : [])
       setTotalPages(response.data?.totalPages || 1)
     } catch (error) {
