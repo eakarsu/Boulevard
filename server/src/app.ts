@@ -412,6 +412,7 @@ app.post('/api/debug/seed', async (req, res) => {
         }
       }
     }
+    }
     
     res.json({ message: 'Sample data created successfully', userId, businessId })
   } catch (error) {
