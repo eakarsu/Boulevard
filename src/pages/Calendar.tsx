@@ -46,17 +46,18 @@ export default function Calendar() {
       })
       
       // Transform the data to match our component interface
+      console.log('Appointments API response:', response.data)
       const appointmentsData = Array.isArray(response.data) ? response.data : []
       const transformedAppointments = appointmentsData.map((apt: any) => ({
         id: apt.id,
-        clientName: `${apt.client?.first_name || ''} ${apt.client?.last_name || ''}`.trim() || 'Unknown Client',
-        service: apt.service?.name || 'Unknown Service',
-        staff: `${apt.staff?.user?.first_name || ''} ${apt.staff?.user?.last_name || ''}`.trim() || 'Unknown Staff',
-        startTime: format(new Date(apt.start_time), 'HH:mm'),
-        endTime: format(new Date(apt.end_time), 'HH:mm'),
-        date: new Date(apt.start_time),
+        clientName: apt.clientName || 'Unknown Client',
+        service: apt.service || 'Unknown Service',
+        staff: apt.staff || 'Unknown Staff',
+        startTime: apt.startTime || '00:00',
+        endTime: apt.endTime || '00:00',
+        date: new Date(apt.date),
         status: apt.status,
-        color: getStatusColor(apt.status)
+        color: apt.color || getStatusColor(apt.status)
       }))
       
       setAppointments(transformedAppointments)
@@ -187,8 +188,7 @@ export default function Calendar() {
                     {weekDates.map((date, dateIndex) => {
                       const dayAppointments = getAppointmentsForDate(date)
                       const timeAppointments = dayAppointments.filter(apt => {
-                        const aptTime = format(new Date(apt.date), 'HH:mm')
-                        return aptTime === time
+                        return apt.startTime === time
                       })
                       
                       return (
