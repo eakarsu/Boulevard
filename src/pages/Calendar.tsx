@@ -46,28 +46,19 @@ export default function Calendar() {
       })
       
       // Transform the data to match our component interface
-      console.log('Full API response:', response)
-      console.log('Response data:', response.data)
       const appointmentsData = Array.isArray(response.data?.data) ? response.data.data : (Array.isArray(response.data) ? response.data : [])
-      console.log('Appointments data array:', appointmentsData)
-      console.log('Number of appointments in data:', appointmentsData.length)
       
-      const transformedAppointments = appointmentsData.map((apt: any) => {
-        console.log('Raw appointment data:', apt)
-        const transformed = {
-          id: apt.id,
-          clientName: apt.clientName || 'Unknown Client',
-          service: apt.service || 'Unknown Service',
-          staff: apt.staff || 'Unknown Staff',
-          startTime: apt.startTime || '00:00',
-          endTime: apt.endTime || '00:00',
-          date: new Date(apt.date),
-          status: apt.status,
-          color: apt.color || getStatusColor(apt.status)
-        }
-        console.log('Transformed appointment:', transformed)
-        return transformed
-      })
+      const transformedAppointments = appointmentsData.map((apt: any) => ({
+        id: apt.id,
+        clientName: apt.clientName || 'Unknown Client',
+        service: apt.service || 'Unknown Service',
+        staff: apt.staff || 'Unknown Staff',
+        startTime: apt.startTime || '00:00',
+        endTime: apt.endTime || '00:00',
+        date: new Date(apt.date),
+        status: apt.status,
+        color: apt.color || getStatusColor(apt.status)
+      }))
       
       console.log('Setting appointments:', transformedAppointments.length, 'appointments')
       if (transformedAppointments.length > 0) {
@@ -98,10 +89,13 @@ export default function Calendar() {
   }
 
   const getAppointmentsForDate = (date: Date) => {
-    return appointments.filter(apt => {
+    const filtered = appointments.filter(apt => {
       const aptDate = new Date(apt.date)
-      return isSameDay(aptDate, date)
+      const matches = isSameDay(aptDate, date)
+      return matches
     })
+    console.log(`Appointments for ${date.toDateString()}:`, filtered.length)
+    return filtered
   }
 
   const nextWeek = () => setCurrentWeek(addWeeks(currentWeek, 1))
