@@ -189,7 +189,8 @@ app.post('/api/debug/create-schema', async (req, res) => {
         hourly_rate DECIMAL(10,2) DEFAULT 0,
         is_active BOOLEAN DEFAULT true,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE(business_id, user_id)
       )
     `)
     
@@ -222,9 +223,11 @@ app.post('/api/debug/seed', async (req, res) => {
   try {
     const { query } = await import('./config/database.js')
     
-    // Check if we already have data
+    // Check if we already have data - but allow re-seeding staff if missing
     const userCheck = await query('SELECT COUNT(*) as count FROM users')
-    if (parseInt(userCheck.rows[0].count) > 0) {
+    const staffCheck = await query('SELECT COUNT(*) as count FROM staff')
+    
+    if (parseInt(userCheck.rows[0].count) > 0 && parseInt(staffCheck.rows[0].count) > 0) {
       return res.json({ message: 'Sample data already exists' })
     }
     
@@ -266,6 +269,10 @@ app.post('/api/debug/seed', async (req, res) => {
     const staffUserResult = await query(`
       INSERT INTO users (email, password_hash, first_name, last_name, phone, role)
       VALUES ('staff@example.com', '$2b$10$defaulthash', 'Jane', 'Smith', '+1555555555', 'staff')
+      ON CONFLICT (email) DO UPDATE SET 
+        first_name = EXCLUDED.first_name,
+        last_name = EXCLUDED.last_name,
+        phone = EXCLUDED.phone
       RETURNING id
     `)
     const staffUserId = staffUserResult.rows[0].id
@@ -273,7 +280,36 @@ app.post('/api/debug/seed', async (req, res) => {
     await query(`
       INSERT INTO staff (business_id, user_id, title, skills, commission_rate, hourly_rate, is_active)
       VALUES ($1, $2, 'Senior Stylist', ARRAY['Hair Cutting', 'Coloring'], 40, 25, true)
+      ON CONFLICT (business_id, user_id) DO UPDATE SET
+        title = EXCLUDED.title,
+        skills = EXCLUDED.skills,
+        commission_rate = EXCLUDED.commission_rate,
+        hourly_rate = EXCLUDED.hourly_rate,
+        is_active = EXCLUDED.is_active
     `, [businessId, staffUserId])
+    
+    // Create another staff member
+    const staffUser2Result = await query(`
+      INSERT INTO users (email, password_hash, first_name, last_name, phone, role)
+      VALUES ('staff2@example.com', '$2b$10$defaulthash', 'Mike', 'Johnson', '+1666666666', 'staff')
+      ON CONFLICT (email) DO UPDATE SET 
+        first_name = EXCLUDED.first_name,
+        last_name = EXCLUDED.last_name,
+        phone = EXCLUDED.phone
+      RETURNING id
+    `)
+    const staffUser2Id = staffUser2Result.rows[0].id
+    
+    await query(`
+      INSERT INTO staff (business_id, user_id, title, skills, commission_rate, hourly_rate, is_active)
+      VALUES ($1, $2, 'Junior Stylist', ARRAY['Hair Cutting', 'Styling'], 30, 20, true)
+      ON CONFLICT (business_id, user_id) DO UPDATE SET
+        title = EXCLUDED.title,
+        skills = EXCLUDED.skills,
+        commission_rate = EXCLUDED.commission_rate,
+        hourly_rate = EXCLUDED.hourly_rate,
+        is_active = EXCLUDED.is_active
+    `, [businessId, staffUser2Id])
     
     res.json({ message: 'Sample data created successfully', userId, businessId })
   } catch (error) {
