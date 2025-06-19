@@ -46,10 +46,7 @@ export default function Calendar() {
       })
       
       // Transform the data to match our component interface
-      console.log('Appointments API response:', response)
-      console.log('Appointments data structure:', response.data)
       const appointmentsData = Array.isArray(response.data) ? response.data : []
-      console.log('Appointments array:', appointmentsData)
       const transformedAppointments = appointmentsData.map((apt: any) => {
         const transformed = {
           id: apt.id,
@@ -66,6 +63,10 @@ export default function Calendar() {
         return transformed
       })
       
+      console.log('Setting appointments:', transformedAppointments.length, 'appointments')
+      if (transformedAppointments.length > 0) {
+        console.log('First appointment:', transformedAppointments[0])
+      }
       setAppointments(transformedAppointments)
     } catch (error) {
       console.error('Error fetching appointments:', error)
