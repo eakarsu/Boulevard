@@ -699,4 +699,209 @@ router.post('/cart/update-gift-card-item', async (req, res) => {
   }
 })
 
+// Get available booking dates for cart
+router.get('/cart/:cartId/bookable-dates', async (req, res) => {
+  try {
+    const { cartId } = req.params
+    const { 
+      limit = 31, 
+      locationId, 
+      searchRangeLower, 
+      searchRangeUpper, 
+      staffVariantIds, 
+      tz 
+    } = req.query
+
+    // Get cart location if not provided
+    let targetLocationId = locationId
+    if (!targetLocationId) {
+      const cartResult = await query(`
+        SELECT location_id FROM boulevard_carts WHERE cart_uuid = $1
+      `, [cartId])
+      
+      if (cartResult.rows.length === 0) {
+        return res.status(404).json({ error: 'Cart not found' })
+      }
+      targetLocationId = cartResult.rows[0].location_id
+    }
+
+    // Calculate date range
+    const today = new Date()
+    const lowerBound = searchRangeLower ? new Date(searchRangeLower) : today
+    const upperBound = searchRangeUpper ? new Date(searchRangeUpper) : new Date(today.getTime() + 7 * 24 * 60 * 60 * 1000)
+
+    // Get available dates from bookable times
+    const datesResult = await query(`
+      SELECT DISTINCT DATE(start_time) as available_date
+      FROM boulevard_bookable_times bt
+      WHERE bt.location_id = $1 
+        AND bt.is_available = true
+        AND DATE(bt.start_time) >= $2
+        AND DATE(bt.start_time) <= $3
+        AND EXTRACT(dow FROM bt.start_time) NOT IN (0, 6)
+      ORDER BY available_date
+      LIMIT $4
+    `, [targetLocationId, lowerBound.toISOString().split('T')[0], upperBound.toISOString().split('T')[0], limit])
+
+    const dates = datesResult.rows.map(row => ({
+      date: row.available_date
+    }))
+
+    res.json({
+      data: {
+        cartBookableDates: dates
+      }
+    })
+  } catch (error) {
+    console.error('Error fetching bookable dates:', error)
+    res.status(500).json({ error: 'Failed to fetch bookable dates' })
+  }
+})
+
+// Get client appointments (requires authentication)
+router.get('/my-appointments', async (req, res) => {
+  try {
+    const { first = 20, query: filterQuery } = req.query
+    
+    // In a real implementation, you'd extract client ID from authenticated token
+    // For demo purposes, we'll use a placeholder
+    const clientId = req.headers['x-client-id'] || '1'
+
+    let whereClause = 'WHERE a.client_id = $1'
+    const params = [clientId]
+    
+    if (filterQuery) {
+      // Parse filter query (simplified implementation)
+      if (filterQuery.includes('startAt <=')) {
+        const dateMatch = filterQuery.match(/'([^']+)'/);
+        if (dateMatch) {
+          whereClause += ' AND a.start_at <= $2'
+          params.push(dateMatch[1])
+        }
+      }
+      if (filterQuery.includes('locationId =')) {
+        const locationMatch = filterQuery.match(/locationId = '([^']+)'/);
+        if (locationMatch) {
+          whereClause += ` AND a.location_id = $${params.length + 1}`
+          params.push(locationMatch[1].replace('urn:blvd:Location:', ''))
+        }
+      }
+    }
+
+    const appointmentsResult = await query(`
+      SELECT 
+        a.id,
+        a.start_at,
+        a.end_at,
+        a.duration,
+        a.cancelled,
+        a.state,
+        a.client_id,
+        a.notes,
+        c.first_name as client_first_name,
+        c.last_name as client_last_name,
+        l.id as location_id,
+        l.name as location_name,
+        b.name as business_name
+      FROM boulevard_appointments a
+      LEFT JOIN boulevard_clients c ON a.client_id = c.id
+      LEFT JOIN boulevard_locations l ON a.location_id = l.id
+      LEFT JOIN boulevard_businesses b ON l.business_id = b.id
+      ${whereClause}
+      ORDER BY a.start_at DESC
+      LIMIT $${params.length + 1}
+    `, [...params, first])
+
+    const appointments = appointmentsResult.rows.map(row => ({
+      node: {
+        id: `urn:blvd:Appointment:${row.id}`,
+        startAt: row.start_at,
+        endAt: row.end_at,
+        duration: row.duration,
+        cancelled: row.cancelled,
+        state: row.state || 'FINAL',
+        clientId: `urn:blvd:Client:${row.client_id}`,
+        client: {
+          id: `urn:blvd:Client:${row.client_id}`,
+          name: `${row.client_first_name} ${row.client_last_name}`
+        },
+        location: {
+          id: `urn:blvd:Location:${row.location_id}`,
+          name: row.location_name,
+          businessName: row.business_name
+        },
+        notes: row.notes || '',
+        appointmentServices: [] // Would need additional query for services
+      }
+    }))
+
+    res.json({
+      data: {
+        myAppointments: {
+          edges: appointments
+        }
+      }
+    })
+  } catch (error) {
+    console.error('Error fetching appointments:', error)
+    res.status(500).json({ error: 'Failed to fetch appointments' })
+  }
+})
+
+// Get client memberships (requires authentication)
+router.get('/my-memberships', async (req, res) => {
+  try {
+    const { first = 10 } = req.query
+    
+    // In a real implementation, you'd extract client ID from authenticated token
+    const clientId = req.headers['x-client-id'] || '1'
+
+    const membershipsResult = await query(`
+      SELECT 
+        m.id,
+        m.term_number,
+        m.start_on,
+        m.end_on,
+        m.client_id,
+        m.status,
+        m.name,
+        c.first_name,
+        c.last_name
+      FROM boulevard_memberships m
+      LEFT JOIN boulevard_clients c ON m.client_id = c.id
+      WHERE m.client_id = $1
+      ORDER BY m.start_on DESC
+      LIMIT $2
+    `, [clientId, first])
+
+    const memberships = membershipsResult.rows.map((row, index) => ({
+      cursor: Buffer.from(`arrayconnection:${index}`).toString('base64'),
+      node: {
+        termNumber: row.term_number,
+        startOn: row.start_on,
+        endOn: row.end_on,
+        clientId: `urn:blvd:Client:${row.client_id}`,
+        client: {
+          firstName: row.first_name,
+          lastName: row.last_name
+        },
+        status: row.status || 'ACTIVE',
+        name: row.name,
+        vouchers: [] // Would need additional query for vouchers
+      }
+    }))
+
+    res.json({
+      data: {
+        myMemberships: {
+          edges: memberships
+        }
+      }
+    })
+  } catch (error) {
+    console.error('Error fetching memberships:', error)
+    res.status(500).json({ error: 'Failed to fetch memberships' })
+  }
+})
+
 export default router
