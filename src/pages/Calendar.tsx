@@ -201,7 +201,11 @@ export default function Calendar() {
                       const timeAppointments = dayAppointments.filter(apt => {
                         // Match appointments that start at this hour
                         const aptHour = apt.startTime.split(':')[0] + ':00'
-                        return aptHour === time
+                        const matches = aptHour === time
+                        if (matches) {
+                          console.log(`Rendering appointment ${apt.id} at ${time}:`, apt)
+                        }
+                        return matches
                       })
                       
                       return (
