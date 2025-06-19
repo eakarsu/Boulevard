@@ -1,8 +1,8 @@
 -- Boulevard API Sample Data
 
 -- Insert sample business
-INSERT INTO boulevard_businesses (id, name) 
-VALUES (1, 'The Jentleman Salon') 
+INSERT INTO boulevard_businesses (id, name)
+VALUES (1, 'The Jentleman Salon')
 ON CONFLICT (id) DO NOTHING;
 
 -- Insert sample location
@@ -72,7 +72,7 @@ ON CONFLICT (service_id, staff_id) DO NOTHING;
 
 -- Insert sample bookable times (next 30 days, 9 AM to 6 PM, excluding weekends)
 INSERT INTO boulevard_bookable_times (time_uuid, location_id, staff_id, start_time, end_time, is_available, score)
-SELECT 
+SELECT
   gen_random_uuid()::text,
   1,
   staff_id,
@@ -81,7 +81,7 @@ SELECT
   true,
   100
 FROM (
-  SELECT 
+  SELECT
     generate_series(
       date_trunc('day', CURRENT_DATE) + interval '9 hours',
       date_trunc('day', CURRENT_DATE + interval '30 days') + interval '18 hours',
@@ -91,3 +91,4 @@ FROM (
 ) times
 WHERE extract(dow from date_time) NOT IN (0, 6) -- Exclude weekends
 ON CONFLICT (time_uuid) DO NOTHING;
+
