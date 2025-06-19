@@ -115,6 +115,117 @@ app.get('/api/debug/tables', async (req, res) => {
   }
 })
 
+// Add a debug endpoint to create database schema
+app.post('/api/debug/create-schema', async (req, res) => {
+  try {
+    const { query } = await import('./config/database.js')
+    
+    // Create tables if they don't exist
+    await query(`
+      CREATE TABLE IF NOT EXISTS users (
+        id SERIAL PRIMARY KEY,
+        email VARCHAR(255) UNIQUE NOT NULL,
+        password_hash VARCHAR(255) NOT NULL,
+        first_name VARCHAR(100) NOT NULL,
+        last_name VARCHAR(100) NOT NULL,
+        phone VARCHAR(20),
+        role VARCHAR(50) DEFAULT 'client',
+        avatar_url TEXT,
+        is_active BOOLEAN DEFAULT true,
+        email_verified BOOLEAN DEFAULT false,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `)
+    
+    await query(`
+      CREATE TABLE IF NOT EXISTS businesses (
+        id SERIAL PRIMARY KEY,
+        owner_id INTEGER REFERENCES users(id),
+        name VARCHAR(255) NOT NULL,
+        description TEXT,
+        logo TEXT,
+        website VARCHAR(255),
+        phone VARCHAR(20),
+        email VARCHAR(255),
+        is_active BOOLEAN DEFAULT true,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `)
+    
+    await query(`
+      CREATE TABLE IF NOT EXISTS clients (
+        id SERIAL PRIMARY KEY,
+        business_id INTEGER REFERENCES businesses(id),
+        first_name VARCHAR(100) NOT NULL,
+        last_name VARCHAR(100) NOT NULL,
+        email VARCHAR(255),
+        phone VARCHAR(20),
+        total_spent DECIMAL(10,2) DEFAULT 0,
+        last_visit DATE,
+        appointment_count INTEGER DEFAULT 0,
+        notes TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `)
+    
+    await query(`
+      CREATE TABLE IF NOT EXISTS services (
+        id SERIAL PRIMARY KEY,
+        business_id INTEGER REFERENCES businesses(id),
+        name VARCHAR(255) NOT NULL,
+        description TEXT,
+        category VARCHAR(100),
+        duration_minutes INTEGER NOT NULL,
+        price DECIMAL(10,2) NOT NULL,
+        color VARCHAR(7) DEFAULT '#3B82F6',
+        is_active BOOLEAN DEFAULT true,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `)
+    
+    await query(`
+      CREATE TABLE IF NOT EXISTS staff (
+        id SERIAL PRIMARY KEY,
+        business_id INTEGER REFERENCES businesses(id),
+        user_id INTEGER REFERENCES users(id),
+        title VARCHAR(255),
+        skills TEXT[],
+        commission_rate DECIMAL(5,2) DEFAULT 0,
+        hourly_rate DECIMAL(10,2) DEFAULT 0,
+        is_active BOOLEAN DEFAULT true,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `)
+    
+    await query(`
+      CREATE TABLE IF NOT EXISTS appointments (
+        id SERIAL PRIMARY KEY,
+        business_id INTEGER REFERENCES businesses(id),
+        client_id INTEGER REFERENCES clients(id),
+        staff_id INTEGER REFERENCES staff(id),
+        service_id INTEGER REFERENCES services(id),
+        start_time TIMESTAMP NOT NULL,
+        end_time TIMESTAMP NOT NULL,
+        status VARCHAR(50) DEFAULT 'scheduled',
+        price DECIMAL(10,2),
+        notes TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `)
+    
+    res.json({ message: 'Database schema created successfully' })
+  } catch (error) {
+    console.error('Error creating schema:', error)
+    res.status(500).json({ error: error.message })
+  }
+})
+
 // Add a debug endpoint to create sample data
 app.post('/api/debug/seed', async (req, res) => {
   try {
