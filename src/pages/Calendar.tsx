@@ -190,7 +190,9 @@ export default function Calendar() {
                     {weekDates.map((date, dateIndex) => {
                       const dayAppointments = getAppointmentsForDate(date)
                       const timeAppointments = dayAppointments.filter(apt => {
-                        return apt.startTime === time
+                        // Match appointments that start at this hour
+                        const aptHour = apt.startTime.split(':')[0] + ':00'
+                        return aptHour === time
                       })
                       
                       return (
