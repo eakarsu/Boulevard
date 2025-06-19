@@ -48,7 +48,7 @@ export default function Calendar() {
       // Transform the data to match our component interface
       console.log('Full API response:', response)
       console.log('Response data:', response.data)
-      const appointmentsData = Array.isArray(response.data) ? response.data : []
+      const appointmentsData = Array.isArray(response.data?.data) ? response.data.data : (Array.isArray(response.data) ? response.data : [])
       console.log('Appointments data array:', appointmentsData)
       console.log('Number of appointments in data:', appointmentsData.length)
       
