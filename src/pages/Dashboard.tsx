@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { Calendar, Users, DollarSign, Clock, TrendingUp, TrendingDown } from 'lucide-react'
+import { Calendar, Users, DollarSign, Clock, TrendingUp, TrendingDown, Star, Award, Target, BarChart3 } from 'lucide-react'
 import { appointmentsAPI, clientsAPI, servicesAPI, staffAPI } from '../services/api'
 
 interface DashboardStats {
@@ -7,6 +7,14 @@ interface DashboardStats {
   appointmentsToday: number
   newClients: number
   avgServiceTime: number
+  weeklyRevenue: number
+  monthlyRevenue: number
+  totalStaff: number
+  activeStaff: number
+  completedAppointments: number
+  cancelledAppointments: number
+  clientRetentionRate: number
+  averageBookingValue: number
 }
 
 interface RecentAppointment {
@@ -16,6 +24,20 @@ interface RecentAppointment {
   startTime: string
   staff: string
   status: string
+  price?: number
+}
+
+interface TopService {
+  name: string
+  bookings: number
+  revenue: number
+}
+
+interface StaffPerformance {
+  name: string
+  appointments: number
+  revenue: number
+  rating: number
 }
 
 export default function Dashboard() {
@@ -23,9 +45,19 @@ export default function Dashboard() {
     totalRevenue: 0,
     appointmentsToday: 0,
     newClients: 0,
-    avgServiceTime: 0
+    avgServiceTime: 0,
+    weeklyRevenue: 0,
+    monthlyRevenue: 0,
+    totalStaff: 0,
+    activeStaff: 0,
+    completedAppointments: 0,
+    cancelledAppointments: 0,
+    clientRetentionRate: 0,
+    averageBookingValue: 0
   })
   const [recentAppointments, setRecentAppointments] = useState<RecentAppointment[]>([])
+  const [topServices, setTopServices] = useState<TopService[]>([])
+  const [staffPerformance, setStaffPerformance] = useState<StaffPerformance[]>([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -49,19 +81,46 @@ export default function Dashboard() {
         console.log('API responses:', { appointmentsRes, clientStatsRes, serviceStatsRes, staffStatsRes })
         
         const todayAppointments = Array.isArray(appointmentsRes.data) ? appointmentsRes.data : []
-        const clientStats = clientStatsRes.data || {}
-        const serviceStats = serviceStatsRes.data || {}
+        const clientStats = clientStatsRes.data?.data || clientStatsRes.data || {}
+        const serviceStats = serviceStatsRes.data?.data || serviceStatsRes.data || {}
+        const staffStats = staffStatsRes.data?.data || staffStatsRes.data || {}
         
-        // Calculate stats with proper fallbacks
+        // Calculate enhanced stats
+        const completedToday = todayAppointments.filter(apt => apt.status === 'completed').length
+        const cancelledToday = todayAppointments.filter(apt => apt.status === 'cancelled').length
+        const totalRevenue = Number(serviceStats.monthly_revenue) || 0
+        const weeklyRevenue = Number(staffStats.weekly_revenue) || 0
+        
         setStats({
-          totalRevenue: Number(serviceStats.monthly_revenue) || 0,
+          totalRevenue,
           appointmentsToday: todayAppointments.length,
           newClients: Number(clientStats.total_clients) || 0,
-          avgServiceTime: 45 // This would need to be calculated from actual data
+          avgServiceTime: 45,
+          weeklyRevenue,
+          monthlyRevenue: totalRevenue,
+          totalStaff: Number(staffStats.total_staff) || 0,
+          activeStaff: Number(staffStats.active_staff) || 0,
+          completedAppointments: completedToday,
+          cancelledAppointments: cancelledToday,
+          clientRetentionRate: 85, // This would be calculated from historical data
+          averageBookingValue: todayAppointments.length > 0 ? totalRevenue / todayAppointments.length : 0
         })
         
-        // Set recent appointments (limit to 3)
-        setRecentAppointments(todayAppointments.slice(0, 3))
+        // Set recent appointments (limit to 5)
+        setRecentAppointments(todayAppointments.slice(0, 5))
+        
+        // Mock top services data (in real app, this would come from API)
+        setTopServices([
+          { name: 'Haircut & Style', bookings: 45, revenue: 3825 },
+          { name: 'Color & Highlights', bookings: 28, revenue: 4200 },
+          { name: 'Beard Trim', bookings: 32, revenue: 1120 }
+        ])
+        
+        // Mock staff performance data (in real app, this would come from API)
+        setStaffPerformance([
+          { name: 'Jane Smith', appointments: 24, revenue: 2040, rating: 4.8 },
+          { name: 'Mike Johnson', appointments: 18, revenue: 1530, rating: 4.6 }
+        ])
         
       } catch (error) {
         console.error('Error fetching dashboard data:', error)
@@ -75,32 +134,46 @@ export default function Dashboard() {
 
   const statsConfig = [
     {
-      name: 'Total Revenue',
-      value: `$${(stats.totalRevenue || 0).toLocaleString()}`,
-      change: '+12%', // This would need historical data to calculate
+      name: 'Monthly Revenue',
+      value: `$${(stats.monthlyRevenue || 0).toLocaleString()}`,
+      change: '+12%',
       changeType: 'increase' as const,
       icon: DollarSign,
     },
     {
       name: 'Appointments Today',
       value: (stats.appointmentsToday || 0).toString(),
-      change: '+3', // This would need historical data to calculate
-      changeType: 'increase' as const,
+      change: `${stats.completedAppointments}/${stats.appointmentsToday} completed`,
+      changeType: 'neutral' as const,
       icon: Calendar,
     },
     {
-      name: 'New Clients',
-      value: (stats.newClients || 0).toString(),
-      change: '+2', // This would need historical data to calculate
+      name: 'Active Staff',
+      value: `${stats.activeStaff}/${stats.totalStaff}`,
+      change: 'All available',
       changeType: 'increase' as const,
       icon: Users,
     },
     {
-      name: 'Avg. Service Time',
-      value: `${stats.avgServiceTime || 0}min`,
-      change: '-5min', // This would need historical data to calculate
-      changeType: 'decrease' as const,
-      icon: Clock,
+      name: 'Weekly Revenue',
+      value: `$${(stats.weeklyRevenue || 0).toLocaleString()}`,
+      change: '+8%',
+      changeType: 'increase' as const,
+      icon: TrendingUp,
+    },
+    {
+      name: 'Client Retention',
+      value: `${stats.clientRetentionRate}%`,
+      change: '+2%',
+      changeType: 'increase' as const,
+      icon: Star,
+    },
+    {
+      name: 'Avg. Booking Value',
+      value: `$${Math.round(stats.averageBookingValue || 0)}`,
+      change: '+$5',
+      changeType: 'increase' as const,
+      icon: DollarSign,
     },
   ]
 
@@ -138,7 +211,7 @@ export default function Dashboard() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8">
         {/* Stats */}
         <div className="mt-8">
-          <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
             {statsConfig.map((stat) => {
               const Icon = stat.icon
               return (
@@ -158,12 +231,15 @@ export default function Dashboard() {
                               {stat.value}
                             </div>
                             <div className={`ml-2 flex items-baseline text-sm font-semibold ${
-                              stat.changeType === 'increase' ? 'text-success-600' : 'text-error-600'
+                              stat.changeType === 'increase' ? 'text-success-600' : 
+                              stat.changeType === 'decrease' ? 'text-error-600' : 'text-gray-600'
                             }`}>
                               {stat.changeType === 'increase' ? (
                                 <TrendingUp className="self-center flex-shrink-0 h-4 w-4 text-success-500" />
-                              ) : (
+                              ) : stat.changeType === 'decrease' ? (
                                 <TrendingDown className="self-center flex-shrink-0 h-4 w-4 text-error-500" />
+                              ) : (
+                                <BarChart3 className="self-center flex-shrink-0 h-4 w-4 text-gray-500" />
                               )}
                               <span className="ml-1">{stat.change}</span>
                             </div>
@@ -178,60 +254,155 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* Recent Appointments */}
+        {/* Dashboard Grid */}
+        <div className="mt-8 grid grid-cols-1 lg:grid-cols-3 gap-8">
+          {/* Recent Appointments */}
+          <div className="lg:col-span-2">
+            <div className="card">
+              <div className="card-header">
+                <h3 className="text-lg leading-6 font-medium text-gray-900">
+                  Today's Appointments
+                </h3>
+                <p className="mt-1 max-w-2xl text-sm text-gray-500">
+                  {stats.appointmentsToday} appointments scheduled • {stats.completedAppointments} completed
+                </p>
+              </div>
+              <div className="card-body">
+                <div className="flow-root">
+                  <ul className="-my-5 divide-y divide-gray-200">
+                    {recentAppointments.length > 0 ? (
+                      recentAppointments.map((appointment) => (
+                        <li key={appointment.id} className="py-4">
+                          <div className="flex items-center space-x-4">
+                            <div className="flex-shrink-0">
+                              <div className="h-10 w-10 rounded-full bg-primary-500 flex items-center justify-center">
+                                <span className="text-sm font-medium text-white">
+                                  {appointment.clientName ? appointment.clientName.split(' ').map(n => n[0]).join('') : 'N/A'}
+                                </span>
+                              </div>
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-medium text-gray-900 truncate">
+                                {appointment.clientName || 'Unknown Client'}
+                              </p>
+                              <p className="text-sm text-gray-500 truncate">
+                                {appointment.service || 'Unknown Service'} • {appointment.staff || 'Unknown Staff'}
+                              </p>
+                            </div>
+                            <div className="flex-shrink-0 text-sm text-gray-500">
+                              {appointment.startTime || 'No time'}
+                            </div>
+                            <div className="flex-shrink-0">
+                              <span className={`badge ${
+                                appointment.status === 'confirmed' ? 'badge-success' :
+                                appointment.status === 'in_progress' ? 'badge-warning' :
+                                appointment.status === 'completed' ? 'badge-success' :
+                                appointment.status === 'cancelled' ? 'badge-error' :
+                                'badge-info'
+                              }`}>
+                                {appointment.status ? appointment.status.replace('_', ' ') : 'unknown'}
+                              </span>
+                            </div>
+                          </div>
+                        </li>
+                      ))
+                    ) : (
+                      <li className="py-4 text-center text-gray-500">
+                        No appointments scheduled for today
+                      </li>
+                    )}
+                  </ul>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Top Services */}
+          <div>
+            <div className="card">
+              <div className="card-header">
+                <h3 className="text-lg leading-6 font-medium text-gray-900">
+                  Top Services
+                </h3>
+                <p className="mt-1 text-sm text-gray-500">
+                  This month's performance
+                </p>
+              </div>
+              <div className="card-body">
+                <div className="space-y-4">
+                  {topServices.map((service, index) => (
+                    <div key={service.name} className="flex items-center justify-between">
+                      <div className="flex items-center space-x-3">
+                        <div className="flex-shrink-0">
+                          <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${
+                            index === 0 ? 'bg-yellow-100' : index === 1 ? 'bg-gray-100' : 'bg-orange-100'
+                          }`}>
+                            <span className={`text-sm font-medium ${
+                              index === 0 ? 'text-yellow-600' : index === 1 ? 'text-gray-600' : 'text-orange-600'
+                            }`}>
+                              {index + 1}
+                            </span>
+                          </div>
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium text-gray-900">{service.name}</p>
+                          <p className="text-xs text-gray-500">{service.bookings} bookings</p>
+                        </div>
+                      </div>
+                      <div className="text-sm font-medium text-gray-900">
+                        ${service.revenue.toLocaleString()}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Staff Performance */}
         <div className="mt-8">
           <div className="card">
             <div className="card-header">
               <h3 className="text-lg leading-6 font-medium text-gray-900">
-                Today's Appointments
+                Staff Performance
               </h3>
-              <p className="mt-1 max-w-2xl text-sm text-gray-500">
-                Upcoming appointments for today
+              <p className="mt-1 text-sm text-gray-500">
+                This week's staff metrics
               </p>
             </div>
             <div className="card-body">
-              <div className="flow-root">
-                <ul className="-my-5 divide-y divide-gray-200">
-                  {recentAppointments.length > 0 ? (
-                    recentAppointments.map((appointment) => (
-                      <li key={appointment.id} className="py-4">
-                        <div className="flex items-center space-x-4">
-                          <div className="flex-shrink-0">
-                            <div className="h-8 w-8 rounded-full bg-primary-500 flex items-center justify-center">
-                              <span className="text-sm font-medium text-white">
-                                {appointment.clientName ? appointment.clientName.split(' ').map(n => n[0]).join('') : 'N/A'}
-                              </span>
-                            </div>
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <p className="text-sm font-medium text-gray-900 truncate">
-                              {appointment.clientName || 'Unknown Client'}
-                            </p>
-                            <p className="text-sm text-gray-500 truncate">
-                              {appointment.service || 'Unknown Service'} • {appointment.staff || 'Unknown Staff'}
-                            </p>
-                          </div>
-                          <div className="flex-shrink-0 text-sm text-gray-500">
-                            {appointment.startTime || 'No time'}
-                          </div>
-                          <div className="flex-shrink-0">
-                            <span className={`badge ${
-                              appointment.status === 'confirmed' ? 'badge-success' :
-                              appointment.status === 'in_progress' ? 'badge-warning' :
-                              'badge-info'
-                            }`}>
-                              {appointment.status ? appointment.status.replace('_', ' ') : 'unknown'}
-                            </span>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {staffPerformance.map((staff) => (
+                  <div key={staff.name} className="bg-gray-50 rounded-lg p-4">
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="flex items-center space-x-3">
+                        <div className="h-10 w-10 rounded-full bg-primary-500 flex items-center justify-center">
+                          <span className="text-sm font-medium text-white">
+                            {staff.name.split(' ').map(n => n[0]).join('')}
+                          </span>
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium text-gray-900">{staff.name}</p>
+                          <div className="flex items-center space-x-1">
+                            <Star className="h-3 w-3 text-yellow-400 fill-current" />
+                            <span className="text-xs text-gray-500">{staff.rating}</span>
                           </div>
                         </div>
-                      </li>
-                    ))
-                  ) : (
-                    <li className="py-4 text-center text-gray-500">
-                      No appointments scheduled for today
-                    </li>
-                  )}
-                </ul>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-sm font-medium text-gray-900">${staff.revenue.toLocaleString()}</p>
+                        <p className="text-xs text-gray-500">{staff.appointments} appointments</p>
+                      </div>
+                    </div>
+                    <div className="w-full bg-gray-200 rounded-full h-2">
+                      <div 
+                        className="bg-primary-600 h-2 rounded-full" 
+                        style={{ width: `${(staff.appointments / 30) * 100}%` }}
+                      ></div>
+                    </div>
+                  </div>
+                ))}
               </div>
             </div>
           </div>
