@@ -3,8 +3,23 @@ import dotenv from 'dotenv'
 
 dotenv.config()
 
+// Default database configuration
+const defaultConfig = {
+  host: process.env.DB_HOST || 'localhost',
+  port: parseInt(process.env.DB_PORT || '5432'),
+  database: process.env.DB_NAME || 'boulevard_dev',
+  user: process.env.DB_USER || process.env.USER || 'postgres',
+  password: process.env.DB_PASSWORD || '',
+}
+
+console.log('Database config:', {
+  ...defaultConfig,
+  password: defaultConfig.password ? '[HIDDEN]' : '[EMPTY]'
+})
+
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
+  ...(!process.env.DATABASE_URL && defaultConfig),
   ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
   max: 20,
   idleTimeoutMillis: 30000,
