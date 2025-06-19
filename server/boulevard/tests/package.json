@@ -1,12 +1,13 @@
 {
   "name": "boulevard-api-tests",
   "version": "1.0.0",
-  "description": "Test suite for Boulevard API clone",
+  "description": "Integration test suite for Boulevard API clone",
   "type": "module",
   "scripts": {
-    "test": "mocha tests/api.test.js --timeout 10000",
-    "test:watch": "mocha tests/api.test.js --timeout 10000 --watch",
-    "test:verbose": "mocha tests/api.test.js --timeout 10000 --reporter spec"
+    "test": "mocha api.test.js --timeout 15000",
+    "test:watch": "mocha api.test.js --timeout 15000 --watch",
+    "test:verbose": "mocha api.test.js --timeout 15000 --reporter spec",
+    "test:integration": "mocha api.test.js --timeout 15000 --grep 'Integration'"
   },
   "devDependencies": {
     "mocha": "^10.2.0",
