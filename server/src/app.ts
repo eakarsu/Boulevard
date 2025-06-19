@@ -25,11 +25,12 @@ const server = createServer(app)
 const io = new Server(server, {
   cors: {
     origin: [
-      process.env.FRONTEND_URL || "http://localhost:3000",
+      "http://localhost:3000",
       "http://localhost:5173", // Vite default port
       "http://127.0.0.1:3000",
-      "http://127.0.0.1:5173"
-    ],
+      "http://127.0.0.1:5173",
+      process.env.FRONTEND_URL
+    ].filter(Boolean),
     methods: ["GET", "POST"]
   }
 })
@@ -47,14 +48,16 @@ const limiter = rateLimit({
 app.use(helmet())
 app.use(cors({
   origin: [
-    process.env.FRONTEND_URL || "http://localhost:3000",
+    "http://localhost:3000",
     "http://localhost:5173", // Vite default port
     "http://127.0.0.1:3000",
-    "http://127.0.0.1:5173"
-  ],
+    "http://127.0.0.1:5173",
+    process.env.FRONTEND_URL
+  ].filter(Boolean),
   credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept'],
+  optionsSuccessStatus: 200
 }))
 app.use(compression())
 app.use(morgan('combined'))
@@ -65,6 +68,16 @@ app.use('/api/', limiter)
 // Add preflight handling
 app.options('*', cors())
 
+// Add request logging middleware
+app.use((req, res, next) => {
+  console.log(`${req.method} ${req.path}`, {
+    origin: req.get('Origin'),
+    userAgent: req.get('User-Agent'),
+    authorization: req.get('Authorization') ? 'Present' : 'Missing'
+  })
+  next()
+})
+
 // Health check
 app.get('/health', (req, res) => {
   res.status(200).json({ status: 'OK', timestamp: new Date().toISOString() })
@@ -73,6 +86,33 @@ app.get('/health', (req, res) => {
 // Add a test endpoint to verify API is working
 app.get('/api/test', (req, res) => {
   res.json({ message: 'API is working', timestamp: new Date().toISOString() })
+})
+
+// Add a debug endpoint to check database tables
+app.get('/api/debug/tables', async (req, res) => {
+  try {
+    const { query } = await import('./config/database.js')
+    
+    const tables = await query(`
+      SELECT table_name 
+      FROM information_schema.tables 
+      WHERE table_schema = 'public'
+    `)
+    
+    const counts = {}
+    for (const table of tables.rows) {
+      try {
+        const result = await query(`SELECT COUNT(*) as count FROM ${table.table_name}`)
+        counts[table.table_name] = parseInt(result.rows[0].count)
+      } catch (error) {
+        counts[table.table_name] = 'Error: ' + error.message
+      }
+    }
+    
+    res.json({ tables: counts })
+  } catch (error) {
+    res.status(500).json({ error: error.message })
+  }
 })
 
 // Routes
