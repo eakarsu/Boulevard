@@ -40,7 +40,7 @@ router.get('/', async (req: any, res) => {
     `
     
     const result = await query(servicesQuery, params)
-    res.json(result.rows)
+    res.json({ data: result.rows })
   } catch (error) {
     console.error('Error fetching services:', error)
     res.status(500).json({ error: 'Failed to fetch services' })
@@ -68,7 +68,7 @@ router.get('/stats', async (req: any, res) => {
     `
     
     const result = await query(statsQuery, [req.user.businessId])
-    res.json(result.rows[0])
+    res.json({ data: result.rows[0] })
   } catch (error) {
     console.error('Error fetching service stats:', error)
     res.status(500).json({ error: 'Failed to fetch service statistics' })

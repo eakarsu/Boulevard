@@ -63,7 +63,7 @@ router.get('/', async (req: any, res) => {
       review_count: Math.floor(Math.random() * 200) + 20 // Random review count
     }))
     
-    res.json(staffWithRatings)
+    res.json({ data: staffWithRatings })
   } catch (error) {
     console.error('Error fetching staff:', error)
     res.status(500).json({ error: 'Failed to fetch staff' })
@@ -91,7 +91,7 @@ router.get('/stats', async (req: any, res) => {
     `
     
     const result = await query(statsQuery, [req.user.businessId])
-    res.json(result.rows[0])
+    res.json({ data: result.rows[0] })
   } catch (error) {
     console.error('Error fetching staff stats:', error)
     res.status(500).json({ error: 'Failed to fetch staff statistics' })

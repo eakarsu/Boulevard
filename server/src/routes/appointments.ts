@@ -65,7 +65,7 @@ router.get('/', async (req: any, res) => {
       color: apt.service_color || '#3B82F6'
     }))
     
-    res.json(formattedAppointments)
+    res.json({ data: formattedAppointments })
   } catch (error) {
     console.error('Error fetching appointments:', error)
     res.status(500).json({ error: 'Failed to fetch appointments' })

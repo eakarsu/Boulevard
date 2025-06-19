@@ -6,6 +6,12 @@ const router = express.Router()
 // Get all clients for a business
 router.get('/', async (req: any, res) => {
   try {
+    console.log('Fetching clients for user:', req.user)
+    
+    if (!req.user || !req.user.businessId) {
+      return res.status(401).json({ error: 'Business ID not found in user context' })
+    }
+    
     const { search, status, page = 1, limit = 50 } = req.query
     const offset = (page - 1) * limit
     
@@ -60,10 +66,12 @@ router.get('/', async (req: any, res) => {
     const countResult = await query(countQuery, params.slice(0, -2))
     
     res.json({
-      clients: result.rows,
-      total: parseInt(countResult.rows[0].total),
-      page: parseInt(page),
-      totalPages: Math.ceil(countResult.rows[0].total / limit)
+      data: {
+        clients: result.rows,
+        total: parseInt(countResult.rows[0].total),
+        page: parseInt(page),
+        totalPages: Math.ceil(countResult.rows[0].total / limit)
+      }
     })
   } catch (error) {
     console.error('Error fetching clients:', error)
@@ -74,6 +82,12 @@ router.get('/', async (req: any, res) => {
 // Get client statistics
 router.get('/stats', async (req: any, res) => {
   try {
+    console.log('Fetching client stats for business:', req.user?.businessId)
+    
+    if (!req.user || !req.user.businessId) {
+      return res.status(401).json({ error: 'Business ID not found in user context' })
+    }
+    
     const statsQuery = `
       SELECT 
         COUNT(*) as total_clients,
@@ -85,7 +99,7 @@ router.get('/stats', async (req: any, res) => {
     `
     
     const result = await query(statsQuery, [req.user.businessId])
-    res.json(result.rows[0])
+    res.json({ data: result.rows[0] })
   } catch (error) {
     console.error('Error fetching client stats:', error)
     res.status(500).json({ error: 'Failed to fetch client statistics' })
