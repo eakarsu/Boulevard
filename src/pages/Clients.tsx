@@ -260,7 +260,7 @@ export default function Clients() {
                         <div className="flex items-center">
                           <div className="h-10 w-10 rounded-full bg-primary-500 flex items-center justify-center">
                             <span className="text-sm font-medium text-white">
-                              {client.firstName[0]}{client.lastName[0]}
+                              {client.first_name[0]}{client.last_name[0]}
                             </span>
                           </div>
                           <div className="ml-4">
