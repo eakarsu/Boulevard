@@ -54,9 +54,9 @@ export default function Clients() {
       const response = await clientsAPI.getClients(params)
       console.log('Clients API response:', response)
       console.log('Clients data structure:', response.data)
-      console.log('Clients array:', response.data?.clients)
-      setClients(Array.isArray(response.data?.clients) ? response.data.clients : [])
-      setTotalPages(response.data?.totalPages || 1)
+      console.log('Clients array:', response.data?.data?.clients)
+      setClients(Array.isArray(response.data?.data?.clients) ? response.data.data.clients : [])
+      setTotalPages(response.data?.data?.totalPages || 1)
     } catch (error) {
       console.error('Error fetching clients:', error)
       setClients([])
@@ -68,7 +68,8 @@ export default function Clients() {
   const fetchStats = async () => {
     try {
       const response = await clientsAPI.getClientStats()
-      setStats(response.data || {
+      console.log('Client stats response:', response)
+      setStats(response.data?.data || {
         total_clients: 0,
         active_clients: 0,
         vip_clients: 0,
