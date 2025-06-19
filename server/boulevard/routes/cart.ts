@@ -99,11 +99,36 @@ router.get('/cart/:cartId/item/:itemId', async (req, res) => {
   try {
     const { cartId, itemId } = req.params
     
+    // Handle gift card items
+    if (itemId === 'GIFT_CARD') {
+      return res.json({
+        data: {
+          cart: {
+            id: cartId,
+            availableItem: {
+              id: itemId,
+              __typename: "CartAvailableGiftCardItem",
+              name: "Gift Card",
+              description: "Give the gift of beauty and wellness",
+              listPriceRange: {
+                min: 2500, // $25.00 in cents
+                max: 50000, // $500.00 in cents
+                variable: true
+              },
+              pricePresets: [2500, 5000, 10000, 15000, 20000],
+              giftCardMin: 2500,
+              giftCardMax: 50000
+            }
+          }
+        }
+      })
+    }
+
     // Extract service ID from URN format
     const serviceId = itemId.replace('urn:blvd:Service:', '')
 
     const serviceResult = await query(`
-      SELECT s.id, s.name, s.description
+      SELECT s.id, s.name, s.description, s.base_price, s.service_type
       FROM boulevard_services s
       WHERE s.id = $1 AND s.is_active = true
     `, [serviceId])
@@ -114,7 +139,29 @@ router.get('/cart/:cartId/item/:itemId', async (req, res) => {
 
     const service = serviceResult.rows[0]
 
-    // Get staff variants
+    // Handle purchasable items (products/memberships)
+    if (service.service_type === 'purchasable') {
+      return res.json({
+        data: {
+          cart: {
+            id: cartId,
+            availableItem: {
+              id: itemId,
+              __typename: "CartAvailablePurchasableItem",
+              name: service.name,
+              description: service.description,
+              listPriceRange: {
+                min: Math.round(service.base_price * 100), // Convert to cents
+                max: Math.round(service.base_price * 100),
+                variable: false
+              }
+            }
+          }
+        }
+      })
+    }
+
+    // Handle bookable services - get staff variants
     const variantsResult = await query(`
       SELECT 
         sv.id,
@@ -146,6 +193,7 @@ router.get('/cart/:cartId/item/:itemId', async (req, res) => {
           id: cartId,
           availableItem: {
             id: itemId,
+            __typename: "CartAvailableBookableItem",
             name: service.name,
             description: service.description,
             staffVariants
@@ -203,8 +251,8 @@ router.post('/cart/add-bookable-item', async (req, res) => {
 
     // Add item to cart
     await query(`
-      INSERT INTO boulevard_cart_items (cart_id, service_id, staff_variant_id, guest_id, price, duration)
-      VALUES ($1, $2, $3, $4, $5, $6)
+      INSERT INTO boulevard_cart_items (cart_id, service_id, staff_variant_id, guest_id, price, duration, item_type)
+      VALUES ($1, $2, $3, $4, $5, $6, 'bookable')
     `, [cartId, serviceId, itemStaffVariantId || null, itemGuestId || null, price, duration])
 
     res.json({
@@ -219,6 +267,172 @@ router.post('/cart/add-bookable-item', async (req, res) => {
   } catch (error) {
     console.error('Error adding item to cart:', error)
     res.status(500).json({ error: 'Failed to add item to cart' })
+  }
+})
+
+// Add purchasable item to cart
+router.post('/cart/add-purchasable-item', async (req, res) => {
+  try {
+    const { id: cartUuid, itemId } = req.body
+
+    if (!cartUuid || !itemId) {
+      return res.status(400).json({ error: 'Cart ID and item ID are required' })
+    }
+
+    // Extract service ID from URN
+    const serviceId = itemId.replace('urn:blvd:Service:', '')
+
+    // Get cart
+    const cartResult = await query('SELECT id FROM boulevard_carts WHERE cart_uuid = $1', [cartUuid])
+    if (cartResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Cart not found' })
+    }
+
+    const cartId = cartResult.rows[0].id
+
+    // Verify service exists and is purchasable
+    const serviceResult = await query(`
+      SELECT id, name, service_type, base_price FROM boulevard_services 
+      WHERE id = $1 AND service_type = 'purchasable' AND is_active = true
+    `, [serviceId])
+
+    if (serviceResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Purchasable item not found' })
+    }
+
+    const service = serviceResult.rows[0]
+
+    // Add item to cart
+    await query(`
+      INSERT INTO boulevard_cart_items (cart_id, service_id, item_type, price)
+      VALUES ($1, $2, 'purchasable', $3)
+    `, [cartId, serviceId, service.base_price])
+
+    res.json({
+      data: {
+        addCartSelectedPurchasableItem: {
+          cart: {
+            id: cartUuid
+          }
+        }
+      }
+    })
+  } catch (error) {
+    console.error('Error adding purchasable item:', error)
+    res.status(500).json({ error: 'Failed to add purchasable item' })
+  }
+})
+
+// Add gift card item to cart
+router.post('/cart/add-gift-card-item', async (req, res) => {
+  try {
+    const { id: cartUuid, itemId, itemPrice } = req.body
+
+    if (!cartUuid || !itemId || !itemPrice) {
+      return res.status(400).json({ error: 'Cart ID, item ID, and price are required' })
+    }
+
+    // Get cart
+    const cartResult = await query('SELECT id FROM boulevard_carts WHERE cart_uuid = $1', [cartUuid])
+    if (cartResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Cart not found' })
+    }
+
+    const cartId = cartResult.rows[0].id
+
+    // Add gift card to cart
+    const giftCardUuid = `urn:blvd:GiftCard:${uuidv4()}`
+    await query(`
+      INSERT INTO boulevard_cart_items (cart_id, service_id, item_type, gift_card_uuid, gift_card_price)
+      VALUES ($1, 13, 'gift_card', $2, $3)
+    `, [cartId, giftCardUuid, itemPrice])
+
+    res.json({
+      data: {
+        addCartSelectedGiftCardItem: {
+          cart: {
+            id: cartUuid
+          }
+        }
+      }
+    })
+  } catch (error) {
+    console.error('Error adding gift card item:', error)
+    res.status(500).json({ error: 'Failed to add gift card item' })
+  }
+})
+
+// Create gift card email fulfillment
+router.post('/cart/create-gift-card-email-fulfillment', async (req, res) => {
+  try {
+    const { 
+      id: cartUuid, 
+      itemId, 
+      messageFromSender, 
+      senderName, 
+      recipientEmail, 
+      recipientName, 
+      deliveryDate 
+    } = req.body
+
+    if (!cartUuid || !itemId || !recipientEmail) {
+      return res.status(400).json({ error: 'Cart ID, item ID, and recipient email are required' })
+    }
+
+    // Get cart and gift card item
+    const cartResult = await query(`
+      SELECT ci.id as cart_item_id, ci.gift_card_uuid
+      FROM boulevard_cart_items ci
+      JOIN boulevard_carts c ON ci.cart_id = c.id
+      WHERE c.cart_uuid = $1 AND ci.gift_card_uuid = $2
+    `, [cartUuid, itemId])
+
+    if (cartResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Gift card item not found in cart' })
+    }
+
+    const { cart_item_id, gift_card_uuid } = cartResult.rows[0]
+    const fulfillmentId = uuidv4()
+
+    // Create email fulfillment
+    await query(`
+      INSERT INTO boulevard_gift_card_fulfillments 
+      (id, cart_item_id, fulfillment_type, sender_name, message_from_sender, 
+       recipient_name, recipient_email, delivery_date)
+      VALUES ($1, $2, 'email', $3, $4, $5, $6, $7)
+    `, [fulfillmentId, cart_item_id, senderName, messageFromSender, recipientName, recipientEmail, deliveryDate])
+
+    res.json({
+      data: {
+        createCartGiftCardItemEmailFulfillment: {
+          cart: {
+            selectedItems: [{
+              __typename: "CartGiftCardItem",
+              id: gift_card_uuid,
+              emailFulfillment: {
+                id: fulfillmentId,
+                senderName,
+                messageFromSender,
+                recipientName,
+                recipientEmail,
+                deliveryDate
+              }
+            }]
+          },
+          emailFulfillment: {
+            id: fulfillmentId,
+            senderName,
+            messageFromSender,
+            recipientName,
+            recipientEmail,
+            deliveryDate
+          }
+        }
+      }
+    })
+  } catch (error) {
+    console.error('Error creating gift card fulfillment:', error)
+    res.status(500).json({ error: 'Failed to create gift card fulfillment' })
   }
 })
 
@@ -381,6 +595,107 @@ router.post('/checkout-cart', async (req, res) => {
   } catch (error) {
     console.error('Error checking out cart:', error)
     res.status(500).json({ error: 'Failed to checkout cart' })
+  }
+})
+
+// Get business gift card settings
+router.get('/business/gift-card-settings', async (req, res) => {
+  try {
+    const result = await query(`
+      SELECT 
+        b.id,
+        b.name,
+        json_agg(
+          json_build_object(
+            'id', gcd.id,
+            'design', json_build_object(
+              'id', gcd.id,
+              'name', gcd.name,
+              'foregroundText', gcd.foreground_text,
+              'backgroundColor', gcd.background_color,
+              'image', gcd.image_url
+            ),
+            'selected', gcd.is_selected
+          )
+        ) as gift_card_designs
+      FROM boulevard_businesses b
+      LEFT JOIN boulevard_gift_card_designs gcd ON b.id = gcd.business_id
+      WHERE b.id = 1
+      GROUP BY b.id, b.name
+    `)
+
+    const business = result.rows[0]
+
+    res.json({
+      data: {
+        business: {
+          id: business.id.toString(),
+          name: business.name,
+          onlineGiftCardSettings: {
+            giftCardDesigns: business.gift_card_designs || []
+          }
+        }
+      }
+    })
+  } catch (error) {
+    console.error('Error fetching gift card settings:', error)
+    res.status(500).json({ error: 'Failed to fetch gift card settings' })
+  }
+})
+
+// Update gift card item with design
+router.post('/cart/update-gift-card-item', async (req, res) => {
+  try {
+    const { id: cartUuid, itemId, giftCardDesignId } = req.body
+
+    if (!cartUuid || !itemId || !giftCardDesignId) {
+      return res.status(400).json({ error: 'Cart ID, item ID, and design ID are required' })
+    }
+
+    // Update gift card item with design
+    const updateResult = await query(`
+      UPDATE boulevard_cart_items 
+      SET gift_card_design_id = $3
+      FROM boulevard_carts c
+      WHERE boulevard_cart_items.cart_id = c.id 
+        AND c.cart_uuid = $1 
+        AND boulevard_cart_items.gift_card_uuid = $2
+      RETURNING boulevard_cart_items.gift_card_uuid
+    `, [cartUuid, itemId, giftCardDesignId])
+
+    if (updateResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Gift card item not found' })
+    }
+
+    // Get updated design info
+    const designResult = await query(`
+      SELECT id, name, foreground_text, background_color, image_url
+      FROM boulevard_gift_card_designs
+      WHERE id = $1
+    `, [giftCardDesignId])
+
+    const design = designResult.rows[0]
+
+    res.json({
+      data: {
+        updateCartSelectedGiftCardItem: {
+          cart: {
+            selectedItem: {
+              id: itemId,
+              giftCardDesign: {
+                id: design.id,
+                image: design.image_url,
+                backgroundColor: design.background_color,
+                foregroundText: design.foreground_text
+              }
+            }
+          }
+        }
+      }
+    })
+  } catch (error) {
+    console.error('Error updating gift card item:', error)
+    res.status(500).json({ error: 'Failed to update gift card item' })
   }
 })
 
