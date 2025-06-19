@@ -46,22 +46,23 @@ export default function Calendar() {
       })
       
       // Transform the data to match our component interface
-      const appointmentsData = Array.isArray(response.data) ? response.data : []
+      const appointmentsData = Array.isArray(response.data?.data) ? response.data.data : []
       const transformedAppointments = appointmentsData.map((apt: any) => ({
         id: apt.id,
-        clientName: apt.clientName,
-        service: apt.service,
-        staff: apt.staff,
-        startTime: apt.startTime,
-        endTime: apt.endTime,
-        date: apt.date,
+        clientName: `${apt.client?.first_name || ''} ${apt.client?.last_name || ''}`.trim() || 'Unknown Client',
+        service: apt.service?.name || 'Unknown Service',
+        staff: `${apt.staff?.user?.first_name || ''} ${apt.staff?.user?.last_name || ''}`.trim() || 'Unknown Staff',
+        startTime: format(new Date(apt.start_time), 'HH:mm'),
+        endTime: format(new Date(apt.end_time), 'HH:mm'),
+        date: new Date(apt.start_time),
         status: apt.status,
-        color: apt.color || getStatusColor(apt.status)
+        color: getStatusColor(apt.status)
       }))
       
       setAppointments(transformedAppointments)
     } catch (error) {
       console.error('Error fetching appointments:', error)
+      setAppointments([])
     } finally {
       setLoading(false)
     }
@@ -185,7 +186,10 @@ export default function Calendar() {
                     </div>
                     {weekDates.map((date, dateIndex) => {
                       const dayAppointments = getAppointmentsForDate(date)
-                      const timeAppointments = dayAppointments.filter(apt => apt.startTime === time)
+                      const timeAppointments = dayAppointments.filter(apt => {
+                        const aptTime = format(new Date(apt.date), 'HH:mm')
+                        return aptTime === time
+                      })
                       
                       return (
                         <div

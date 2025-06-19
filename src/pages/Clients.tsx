@@ -52,10 +52,11 @@ export default function Clients() {
       }
       
       const response = await clientsAPI.getClients(params)
-      setClients(response.data.clients || [])
-      setTotalPages(response.data.totalPages || 1)
+      setClients(Array.isArray(response.data?.data) ? response.data.data : [])
+      setTotalPages(response.data?.totalPages || 1)
     } catch (error) {
       console.error('Error fetching clients:', error)
+      setClients([])
     } finally {
       setLoading(false)
     }
@@ -64,7 +65,7 @@ export default function Clients() {
   const fetchStats = async () => {
     try {
       const response = await clientsAPI.getClientStats()
-      setStats(response.data || {
+      setStats(response.data?.data || {
         total_clients: 0,
         active_clients: 0,
         vip_clients: 0,
@@ -72,6 +73,12 @@ export default function Clients() {
       })
     } catch (error) {
       console.error('Error fetching client stats:', error)
+      setStats({
+        total_clients: 0,
+        active_clients: 0,
+        vip_clients: 0,
+        total_revenue: 0
+      })
     }
   }
 
@@ -254,7 +261,7 @@ export default function Clients() {
                       </tr>
                     ))
                   ) : (
-                    clients.map((client) => (
+                    Array.isArray(clients) && clients.map((client) => (
                       <tr key={client.id} className="hover:bg-gray-50">
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex items-center">
