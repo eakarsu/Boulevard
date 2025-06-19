@@ -255,7 +255,7 @@ export default function Clients() {
                     ))
                   ) : (
                     clients.map((client) => (
-                    <tr key={client.id} className="hover:bg-gray-50">
+                      <tr key={client.id} className="hover:bg-gray-50">
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex items-center">
                           <div className="h-10 w-10 rounded-full bg-primary-500 flex items-center justify-center">
@@ -304,8 +304,9 @@ export default function Clients() {
                           </button>
                         </div>
                       </td>
-                    </tr>
-                  ))}
+                      </tr>
+                    ))
+                  )}
                 </tbody>
               </table>
             </div>
