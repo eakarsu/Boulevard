@@ -389,18 +389,12 @@ app.post('/api/debug/seed', async (req, res) => {
         }
       }
       
-      // Insert appointments in batches
-      for (let i = 0; i < appointments.length; i += 10) {
-        const batch = appointments.slice(i, i + 10)
-        const values = batch.map((_, index) => {
-          const baseIndex = i * 9 + index * 9
-          return `($${baseIndex + 1}, $${baseIndex + 2}, $${baseIndex + 3}, $${baseIndex + 4}, $${baseIndex + 5}, $${baseIndex + 6}, $${baseIndex + 7}, $${baseIndex + 8}, $${baseIndex + 9})`
-        }).join(', ')
-        
+      // Insert appointments one by one to avoid parameter issues
+      for (const appointment of appointments) {
         await query(`
           INSERT INTO appointments (business_id, client_id, staff_id, service_id, start_time, end_time, status, price, notes)
-          VALUES ${values}
-        `, batch.flat())
+          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+        `, appointment)
       }
     }
     
