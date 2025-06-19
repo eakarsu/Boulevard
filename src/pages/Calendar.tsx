@@ -15,8 +15,8 @@ interface Appointment {
   color: string
 }
 
-const timeSlots = Array.from({ length: 12 }, (_, i) => {
-  const hour = i + 8 // Start from 8 AM
+const timeSlots = Array.from({ length: 14 }, (_, i) => {
+  const hour = i + 8 // Start from 8 AM to 9 PM
   return `${hour.toString().padStart(2, '0')}:00`
 })
 
@@ -203,9 +203,10 @@ export default function Calendar() {
                     {weekDates.map((date, dateIndex) => {
                       const dayAppointments = getAppointmentsForDate(date)
                       const timeAppointments = dayAppointments.filter(apt => {
-                        // Match appointments that start at this hour
-                        const aptHour = apt.startTime.split(':')[0] + ':00'
-                        const matches = aptHour === time
+                        // Match appointments that start within this hour slot
+                        const aptHour = parseInt(apt.startTime.split(':')[0])
+                        const slotHour = parseInt(time.split(':')[0])
+                        const matches = aptHour === slotHour
                         if (matches) {
                           console.log(`Rendering appointment ${apt.id} at ${time}:`, apt)
                         }
