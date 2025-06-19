@@ -250,8 +250,100 @@ router.post('/cart/update', async (req, res) => {
   }
 })
 
+// Create cart guest
+router.post('/create-cart-guest', async (req, res) => {
+  try {
+    const { id: cartUuid, email, firstName, lastName, phoneNumber } = req.body
+
+    const cartResult = await query(`
+      SELECT id FROM boulevard_carts WHERE cart_uuid = $1
+    `, [cartUuid])
+
+    if (cartResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Cart not found' })
+    }
+
+    const cartId = cartResult.rows[0].id
+    const guestUuid = uuidv4()
+
+    const guestResult = await query(`
+      INSERT INTO boulevard_cart_guests (cart_id, guest_uuid, email, first_name, last_name, phone_number)
+      VALUES ($1, $2, $3, $4, $5, $6)
+      RETURNING id, guest_uuid, first_name, last_name, email
+    `, [cartId, guestUuid, email, firstName, lastName, phoneNumber])
+
+    const guest = guestResult.rows[0]
+
+    // Get all guests for this cart
+    const guestsResult = await query(`
+      SELECT guest_uuid as id, first_name, last_name, email
+      FROM boulevard_cart_guests
+      WHERE cart_id = $1
+    `, [cartId])
+
+    res.json({
+      data: {
+        createCartGuest: {
+          cart: {
+            id: cartUuid,
+            guests: guestsResult.rows
+          }
+        }
+      }
+    })
+  } catch (error) {
+    console.error('Error creating cart guest:', error)
+    res.status(500).json({ error: 'Failed to create cart guest' })
+  }
+})
+
+// Add card payment method
+router.post('/add-cart-card-payment-method', async (req, res) => {
+  try {
+    const { id: cartUuid, token, select } = req.body
+
+    const cartResult = await query(`
+      SELECT id FROM boulevard_carts WHERE cart_uuid = $1
+    `, [cartUuid])
+
+    if (cartResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Cart not found' })
+    }
+
+    const cartId = cartResult.rows[0].id
+
+    // Unselect other payment methods if this one is being selected
+    if (select) {
+      await query(`
+        UPDATE boulevard_payment_methods 
+        SET is_selected = false 
+        WHERE cart_id = $1
+      `, [cartId])
+    }
+
+    // Add payment method (in real implementation, you'd decode the token)
+    await query(`
+      INSERT INTO boulevard_payment_methods (cart_id, method_type, token, is_selected)
+      VALUES ($1, 'card', $2, $3)
+    `, [cartId, token, select])
+
+    res.json({
+      data: {
+        addCartCardPaymentMethod: {
+          cart: {
+            id: cartUuid
+          }
+        }
+      }
+    })
+  } catch (error) {
+    console.error('Error adding payment method:', error)
+    res.status(500).json({ error: 'Failed to add payment method' })
+  }
+})
+
 // Checkout cart
-router.post('/cart/checkout', async (req, res) => {
+router.post('/checkout-cart', async (req, res) => {
   try {
     const { id: cartUuid } = req.body
 

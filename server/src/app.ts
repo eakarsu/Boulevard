@@ -14,6 +14,7 @@ import clientRoutes from './routes/clients.js'
 import serviceRoutes from './routes/services.js'
 import staffRoutes from './routes/staff.js'
 import appointmentRoutes from './routes/appointments.js'
+import boulevardRoutes from '../boulevard/index.js'
 import { authenticateToken } from './middleware/auth.js'
 import { errorHandler } from './middleware/errorHandler.js'
 
@@ -439,6 +440,7 @@ app.use('/api/clients', bypassAuth, clientRoutes)
 app.use('/api/services', bypassAuth, serviceRoutes)
 app.use('/api/staff', bypassAuth, staffRoutes)
 app.use('/api/appointments', bypassAuth, appointmentRoutes)
+app.use('/api', boulevardRoutes)
 
 // Error handling
 app.use(errorHandler)
