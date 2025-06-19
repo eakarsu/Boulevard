@@ -319,30 +319,37 @@ app.post('/api/debug/seed', async (req, res) => {
       }
     }
     
-    // Always create sample clients and appointments for testing
-    // Create sample clients
-    await query(`
-      INSERT INTO clients (business_id, first_name, last_name, email, phone, total_spent, last_visit, appointment_count)
-      VALUES 
-        ($1, 'Sarah', 'Johnson', 'sarah@example.com', '+1111111111', 1250, '2024-06-15', 8),
-        ($1, 'Michael', 'Chen', 'michael@example.com', '+2222222222', 890, '2024-06-10', 5),
-        ($1, 'Lisa', 'Anderson', 'lisa@example.com', '+3333333333', 2100, '2024-06-08', 12),
-        ($1, 'Emma', 'Wilson', 'emma@example.com', '+1444444444', 675, '2024-06-12', 4),
-        ($1, 'David', 'Brown', 'david@example.com', '+1555555555', 1890, '2024-06-14', 9),
-        ($1, 'Jessica', 'Davis', 'jessica@example.com', '+1666666666', 420, '2024-06-05', 3),
-        ($1, 'Ryan', 'Miller', 'ryan@example.com', '+1777777777', 1560, '2024-06-11', 7),
-        ($1, 'Ashley', 'Garcia', 'ashley@example.com', '+1888888888', 980, '2024-06-13', 6),
-        ($1, 'Kevin', 'Martinez', 'kevin@example.com', '+1999999999', 1340, '2024-06-09', 8),
-        ($1, 'Sophia', 'Rodriguez', 'sophia@example.com', '+1000000000', 2250, '2024-06-16', 15)
-      ON CONFLICT (business_id, email) DO NOTHING
-    `, [businessId])
+    // Check if clients already exist before creating
+    const existingClients = await query(`SELECT COUNT(*) as count FROM clients WHERE business_id = $1`, [businessId])
     
-    // Create sample appointments for calendar
-    const clientsResult = await query(`SELECT id FROM clients WHERE business_id = $1`, [businessId])
-    const servicesResult = await query(`SELECT id FROM services WHERE business_id = $1`, [businessId])
-    const staffResult = await query(`SELECT id FROM staff WHERE business_id = $1`, [businessId])
+    if (parseInt(existingClients.rows[0].count) === 0) {
+      // Create sample clients
+      await query(`
+        INSERT INTO clients (business_id, first_name, last_name, email, phone, total_spent, last_visit, appointment_count)
+        VALUES 
+          ($1, 'Sarah', 'Johnson', 'sarah@example.com', '+1111111111', 1250, '2024-06-15', 8),
+          ($1, 'Michael', 'Chen', 'michael@example.com', '+2222222222', 890, '2024-06-10', 5),
+          ($1, 'Lisa', 'Anderson', 'lisa@example.com', '+3333333333', 2100, '2024-06-08', 12),
+          ($1, 'Emma', 'Wilson', 'emma@example.com', '+1444444444', 675, '2024-06-12', 4),
+          ($1, 'David', 'Brown', 'david@example.com', '+1555555555', 1890, '2024-06-14', 9),
+          ($1, 'Jessica', 'Davis', 'jessica@example.com', '+1666666666', 420, '2024-06-05', 3),
+          ($1, 'Ryan', 'Miller', 'ryan@example.com', '+1777777777', 1560, '2024-06-11', 7),
+          ($1, 'Ashley', 'Garcia', 'ashley@example.com', '+1888888888', 980, '2024-06-13', 6),
+          ($1, 'Kevin', 'Martinez', 'kevin@example.com', '+1999999999', 1340, '2024-06-09', 8),
+          ($1, 'Sophia', 'Rodriguez', 'sophia@example.com', '+1000000000', 2250, '2024-06-16', 15)
+      `, [businessId])
+    }
     
-    if (clientsResult.rows.length > 0 && servicesResult.rows.length > 0 && staffResult.rows.length > 0) {
+    // Check if appointments already exist before creating
+    const existingAppointments = await query(`SELECT COUNT(*) as count FROM appointments WHERE business_id = $1`, [businessId])
+    
+    if (parseInt(existingAppointments.rows[0].count) === 0) {
+      // Create sample appointments for calendar
+      const clientsResult = await query(`SELECT id FROM clients WHERE business_id = $1`, [businessId])
+      const servicesResult = await query(`SELECT id FROM services WHERE business_id = $1`, [businessId])
+      const staffResult = await query(`SELECT id FROM staff WHERE business_id = $1`, [businessId])
+      
+      if (clientsResult.rows.length > 0 && servicesResult.rows.length > 0 && staffResult.rows.length > 0) {
       const clients = clientsResult.rows
       const services = servicesResult.rows
       const staff = staffResult.rows
