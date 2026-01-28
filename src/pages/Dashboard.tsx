@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { Calendar, Users, DollarSign, Clock, TrendingUp, TrendingDown, Star, Award, Target, BarChart3 } from 'lucide-react'
 import { appointmentsAPI, clientsAPI, servicesAPI, staffAPI } from '../services/api'
+import { AppointmentDetailModal } from '../components/modals'
 
 interface DashboardStats {
   totalRevenue: number
@@ -41,6 +43,8 @@ interface StaffPerformance {
 }
 
 export default function Dashboard() {
+  const navigate = useNavigate()
+  const [selectedAppointment, setSelectedAppointment] = useState<RecentAppointment | null>(null)
   const [stats, setStats] = useState<DashboardStats>({
     totalRevenue: 0,
     appointmentsToday: 0,
@@ -139,6 +143,7 @@ export default function Dashboard() {
       change: '+12%',
       changeType: 'increase' as const,
       icon: DollarSign,
+      route: '/payments',
     },
     {
       name: 'Appointments Today',
@@ -146,6 +151,7 @@ export default function Dashboard() {
       change: `${stats.completedAppointments}/${stats.appointmentsToday} completed`,
       changeType: 'neutral' as const,
       icon: Calendar,
+      route: '/calendar',
     },
     {
       name: 'Active Staff',
@@ -153,6 +159,7 @@ export default function Dashboard() {
       change: 'All available',
       changeType: 'increase' as const,
       icon: Users,
+      route: '/staff',
     },
     {
       name: 'Weekly Revenue',
@@ -160,6 +167,7 @@ export default function Dashboard() {
       change: '+8%',
       changeType: 'increase' as const,
       icon: TrendingUp,
+      route: '/payments',
     },
     {
       name: 'Client Retention',
@@ -167,6 +175,7 @@ export default function Dashboard() {
       change: '+2%',
       changeType: 'increase' as const,
       icon: Star,
+      route: '/clients',
     },
     {
       name: 'Avg. Booking Value',
@@ -174,6 +183,7 @@ export default function Dashboard() {
       change: '+$5',
       changeType: 'increase' as const,
       icon: DollarSign,
+      route: '/analytics',
     },
   ]
 
@@ -215,7 +225,11 @@ export default function Dashboard() {
             {statsConfig.map((stat) => {
               const Icon = stat.icon
               return (
-                <div key={stat.name} className="card">
+                <div
+                  key={stat.name}
+                  className="card cursor-pointer hover:shadow-lg hover:border-primary-300 transition-all duration-200"
+                  onClick={() => navigate(stat.route)}
+                >
                   <div className="card-body">
                     <div className="flex items-center">
                       <div className="flex-shrink-0">
@@ -231,7 +245,7 @@ export default function Dashboard() {
                               {stat.value}
                             </div>
                             <div className={`ml-2 flex items-baseline text-sm font-semibold ${
-                              stat.changeType === 'increase' ? 'text-success-600' : 
+                              stat.changeType === 'increase' ? 'text-success-600' :
                               stat.changeType === 'decrease' ? 'text-error-600' : 'text-gray-600'
                             }`}>
                               {stat.changeType === 'increase' ? (
@@ -272,7 +286,11 @@ export default function Dashboard() {
                   <ul className="-my-5 divide-y divide-gray-200">
                     {recentAppointments.length > 0 ? (
                       recentAppointments.map((appointment) => (
-                        <li key={appointment.id} className="py-4">
+                        <li
+                          key={appointment.id}
+                          className="py-4 cursor-pointer hover:bg-gray-50 rounded-lg px-2 -mx-2 transition-colors"
+                          onClick={() => setSelectedAppointment(appointment)}
+                        >
                           <div className="flex items-center space-x-4">
                             <div className="flex-shrink-0">
                               <div className="h-10 w-10 rounded-full bg-primary-500 flex items-center justify-center">
@@ -331,7 +349,11 @@ export default function Dashboard() {
               <div className="card-body">
                 <div className="space-y-4">
                   {topServices.map((service, index) => (
-                    <div key={service.name} className="flex items-center justify-between">
+                    <div
+                      key={service.name}
+                      className="flex items-center justify-between cursor-pointer hover:bg-gray-50 rounded-lg p-2 -mx-2 transition-colors"
+                      onClick={() => navigate('/services')}
+                    >
                       <div className="flex items-center space-x-3">
                         <div className="flex-shrink-0">
                           <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${
@@ -374,7 +396,11 @@ export default function Dashboard() {
             <div className="card-body">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {staffPerformance.map((staff) => (
-                  <div key={staff.name} className="bg-gray-50 rounded-lg p-4">
+                  <div
+                    key={staff.name}
+                    className="bg-gray-50 rounded-lg p-4 cursor-pointer hover:bg-gray-100 transition-colors"
+                    onClick={() => navigate('/staff')}
+                  >
                     <div className="flex items-center justify-between mb-3">
                       <div className="flex items-center space-x-3">
                         <div className="h-10 w-10 rounded-full bg-primary-500 flex items-center justify-center">
@@ -396,8 +422,8 @@ export default function Dashboard() {
                       </div>
                     </div>
                     <div className="w-full bg-gray-200 rounded-full h-2">
-                      <div 
-                        className="bg-primary-600 h-2 rounded-full" 
+                      <div
+                        className="bg-primary-600 h-2 rounded-full"
                         style={{ width: `${(staff.appointments / 30) * 100}%` }}
                       ></div>
                     </div>
@@ -408,6 +434,22 @@ export default function Dashboard() {
           </div>
         </div>
       </div>
+
+      {/* Appointment Detail Modal */}
+      {selectedAppointment && (
+        <AppointmentDetailModal
+          appointment={selectedAppointment}
+          onClose={() => setSelectedAppointment(null)}
+          onMarkComplete={() => {
+            // Handle mark complete
+            setSelectedAppointment(null)
+          }}
+          onCancel={() => {
+            // Handle cancel
+            setSelectedAppointment(null)
+          }}
+        />
+      )}
     </div>
   )
 }

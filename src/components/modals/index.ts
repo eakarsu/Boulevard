@@ -1,0 +1,5 @@
+export { default as ClientDetailModal } from './ClientDetailModal'
+export { default as ServiceDetailModal } from './ServiceDetailModal'
+export { default as StaffDetailModal } from './StaffDetailModal'
+export { default as PaymentDetailModal } from './PaymentDetailModal'
+export { default as AppointmentDetailModal } from './AppointmentDetailModal'

@@ -15,6 +15,13 @@ import serviceRoutes from './routes/services.js'
 import staffRoutes from './routes/staff.js'
 import appointmentRoutes from './routes/appointments.js'
 import boulevardRoutes from '../boulevard/index.js'
+import schedulingRoutes from './routes/scheduling.js'
+import paymentsRoutes from './routes/payments.js'
+import notificationsRoutes from './routes/notifications.js'
+import recurringRoutes from './routes/recurring.js'
+import calendarSyncRoutes from './routes/calendar-sync.js'
+import analyticsRoutes from './routes/analytics.js'
+import serviceCatalogRoutes from './routes/service-catalog.js'
 import { authenticateToken } from './middleware/auth.js'
 import { errorHandler } from './middleware/errorHandler.js'
 
@@ -424,11 +431,12 @@ app.post('/api/debug/seed', async (req, res) => {
 
 // Temporary middleware to bypass authentication for testing
 const bypassAuth = (req: any, res: any, next: any) => {
-  // Set a mock user for testing
+  // Set a mock user for testing with UUID IDs matching seeded data
   req.user = {
-    id: 1,
-    email: 'john@example.com',
-    businessId: 1
+    id: '11111111-1111-1111-1111-111111111111',
+    email: 'owner@boulevard.com',
+    role: 'owner',
+    businessId: '22222222-2222-2222-2222-222222222222'
   }
   next()
 }
@@ -441,6 +449,15 @@ app.use('/api/services', bypassAuth, serviceRoutes)
 app.use('/api/staff', bypassAuth, staffRoutes)
 app.use('/api/appointments', bypassAuth, appointmentRoutes)
 app.use('/api', boulevardRoutes)
+
+// New feature routes
+app.use('/api/scheduling', bypassAuth, schedulingRoutes)
+app.use('/api/payments', bypassAuth, paymentsRoutes)
+app.use('/api/notifications', bypassAuth, notificationsRoutes)
+app.use('/api/recurring', bypassAuth, recurringRoutes)
+app.use('/api/calendar-sync', bypassAuth, calendarSyncRoutes)
+app.use('/api/analytics', bypassAuth, analyticsRoutes)
+app.use('/api/service-catalog', bypassAuth, serviceCatalogRoutes)
 
 // Error handling
 app.use(errorHandler)

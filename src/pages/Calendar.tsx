@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react'
 import { ChevronLeft, ChevronRight, Plus, Clock, User, MapPin } from 'lucide-react'
-import { format, startOfWeek, addDays, isSameDay, addWeeks, subWeeks } from 'date-fns'
-import { appointmentsAPI } from '../services/api'
+import { format, startOfWeek, addDays, isSameDay, addWeeks, subWeeks, endOfDay } from 'date-fns'
+import { appointmentsAPI, clientsAPI, staffAPI, servicesAPI } from '../services/api'
+import { AppointmentDetailModal } from '../components/modals'
 
 interface Appointment {
   id: string
@@ -27,6 +28,13 @@ export default function Calendar() {
   const [view, setView] = useState<'week' | 'day'>('week')
   const [appointments, setAppointments] = useState<Appointment[]>([])
   const [loading, setLoading] = useState(true)
+  const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null)
+  const [editingAppointment, setEditingAppointment] = useState<Appointment | null>(null)
+  const [deleteConfirm, setDeleteConfirm] = useState<Appointment | null>(null)
+  const [showCreateModal, setShowCreateModal] = useState(false)
+  const [clients, setClients] = useState<any[]>([])
+  const [staffList, setStaffList] = useState<any[]>([])
+  const [services, setServices] = useState<any[]>([])
 
   const weekStart = startOfWeek(currentWeek)
   const weekDates = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i))
@@ -35,11 +43,30 @@ export default function Calendar() {
     fetchAppointments()
   }, [currentWeek])
 
+  useEffect(() => {
+    fetchDropdownData()
+  }, [])
+
+  const fetchDropdownData = async () => {
+    try {
+      const [clientsRes, staffRes, servicesRes] = await Promise.all([
+        clientsAPI.getClients({ limit: 100 }),
+        staffAPI.getStaff(),
+        servicesAPI.getServices()
+      ])
+      setClients(clientsRes.data?.data?.clients || [])
+      setStaffList(staffRes.data?.data || [])
+      setServices(servicesRes.data?.data || [])
+    } catch (error) {
+      console.error('Error fetching dropdown data:', error)
+    }
+  }
+
   const fetchAppointments = async () => {
     try {
       setLoading(true)
-      const weekEnd = addDays(weekStart, 6)
-      
+      const weekEnd = endOfDay(addDays(weekStart, 6))
+
       const response = await appointmentsAPI.getAppointments({
         start_date: weekStart.toISOString(),
         end_date: weekEnd.toISOString()
@@ -84,15 +111,15 @@ export default function Calendar() {
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'confirmed':
-        return 'bg-blue-500'
+        return '#3B82F6'
       case 'in_progress':
-        return 'bg-green-500'
+        return '#22C55E'
       case 'completed':
-        return 'bg-gray-500'
+        return '#6B7280'
       case 'cancelled':
-        return 'bg-red-500'
+        return '#EF4444'
       default:
-        return 'bg-purple-500'
+        return '#A855F7'
     }
   }
 
@@ -124,6 +151,73 @@ export default function Calendar() {
 
   const nextWeek = () => setCurrentWeek(addWeeks(currentWeek, 1))
   const prevWeek = () => setCurrentWeek(subWeeks(currentWeek, 1))
+
+  const handleEdit = (appointment: Appointment) => {
+    setSelectedAppointment(null)
+    setEditingAppointment(appointment)
+  }
+
+  const handleDelete = async (appointment: Appointment) => {
+    setSelectedAppointment(null)
+    setDeleteConfirm(appointment)
+  }
+
+  const confirmDelete = async () => {
+    if (!deleteConfirm) return
+
+    try {
+      await appointmentsAPI.deleteAppointment(deleteConfirm.id)
+      setDeleteConfirm(null)
+      fetchAppointments()
+    } catch (error) {
+      console.error('Error deleting appointment:', error)
+      alert('Failed to delete appointment')
+    }
+  }
+
+  const handleUpdateAppointment = async (updatedData: any) => {
+    if (!editingAppointment) return
+
+    try {
+      await appointmentsAPI.updateAppointment(editingAppointment.id, updatedData)
+      setEditingAppointment(null)
+      fetchAppointments()
+    } catch (error) {
+      console.error('Error updating appointment:', error)
+      alert('Failed to update appointment')
+    }
+  }
+
+  const handleMarkComplete = async (appointment: any) => {
+    try {
+      await appointmentsAPI.updateAppointment(appointment.id, { status: 'completed' })
+      setSelectedAppointment(null)
+      fetchAppointments()
+    } catch (error) {
+      console.error('Error marking appointment complete:', error)
+    }
+  }
+
+  const handleCancel = async (appointment: any) => {
+    try {
+      await appointmentsAPI.updateAppointment(appointment.id, { status: 'cancelled' })
+      setSelectedAppointment(null)
+      fetchAppointments()
+    } catch (error) {
+      console.error('Error cancelling appointment:', error)
+    }
+  }
+
+  const handleCreateAppointment = async (appointmentData: any) => {
+    try {
+      await appointmentsAPI.createAppointment(appointmentData)
+      setShowCreateModal(false)
+      fetchAppointments()
+    } catch (error) {
+      console.error('Error creating appointment:', error)
+      alert('Failed to create appointment')
+    }
+  }
 
   return (
     <div className="py-6">
@@ -174,7 +268,7 @@ export default function Calendar() {
                 Day
               </button>
             </div>
-            <button className="btn-primary">
+            <button className="btn-primary" onClick={() => setShowCreateModal(true)}>
               <Plus className="h-4 w-4 mr-2" />
               New Appointment
             </button>
@@ -242,7 +336,9 @@ export default function Calendar() {
                           {timeAppointments.map((appointment) => (
                             <div
                               key={appointment.id}
-                              className="bg-blue-500 text-white p-1 rounded text-xs mb-1 cursor-pointer hover:opacity-90"
+                              className="text-white p-1 rounded text-xs mb-1 cursor-pointer hover:opacity-80 transition-opacity shadow-sm"
+                              style={{ backgroundColor: appointment.color || '#3B82F6' }}
+                              onClick={() => setSelectedAppointment(appointment)}
                             >
                               <div className="font-medium truncate text-xs">
                                 {appointment.clientName}
@@ -250,6 +346,9 @@ export default function Calendar() {
                               <div className="flex items-center space-x-1">
                                 <Clock className="h-2 w-2" />
                                 <span className="text-xs">{appointment.startTime}</span>
+                              </div>
+                              <div className="truncate text-xs opacity-90">
+                                {appointment.service}
                               </div>
                             </div>
                           ))}
@@ -279,6 +378,284 @@ export default function Calendar() {
           </div>
         </div>
       </div>
+
+      {/* Appointment Detail Modal */}
+      {selectedAppointment && (
+        <AppointmentDetailModal
+          appointment={{
+            id: selectedAppointment.id,
+            clientName: selectedAppointment.clientName,
+            service: selectedAppointment.service,
+            startTime: selectedAppointment.date.toISOString(),
+            staff: selectedAppointment.staff,
+            status: selectedAppointment.status
+          }}
+          onClose={() => setSelectedAppointment(null)}
+          onMarkComplete={handleMarkComplete}
+          onCancel={handleCancel}
+          onEdit={() => handleEdit(selectedAppointment)}
+          onDelete={() => handleDelete(selectedAppointment)}
+        />
+      )}
+
+      {/* Create Appointment Modal */}
+      {showCreateModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-lg mx-4 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between p-6 border-b sticky top-0 bg-white">
+              <h2 className="text-xl font-semibold text-gray-900">New Appointment</h2>
+              <button onClick={() => setShowCreateModal(false)} className="p-2 hover:bg-gray-100 rounded-full">
+                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            <form
+              onSubmit={(e) => {
+                e.preventDefault()
+                const formData = new FormData(e.currentTarget)
+                const date = formData.get('date') as string
+                const time = formData.get('time') as string
+                const serviceId = formData.get('serviceId') as string
+                const selectedService = services.find(s => s.id === serviceId)
+                const duration = selectedService?.duration_minutes || 60
+
+                const startTime = new Date(`${date}T${time}`)
+                const endTime = new Date(startTime.getTime() + duration * 60000)
+
+                handleCreateAppointment({
+                  clientId: formData.get('clientId'),
+                  staffId: formData.get('staffId'),
+                  serviceId: serviceId,
+                  startTime: startTime.toISOString(),
+                  endTime: endTime.toISOString(),
+                  notes: formData.get('notes')
+                })
+              }}
+              className="p-6 space-y-4"
+            >
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Client *</label>
+                <select
+                  name="clientId"
+                  required
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-primary-500 focus:border-primary-500"
+                >
+                  <option value="">Select a client</option>
+                  {clients.map((client: any) => (
+                    <option key={client.id} value={client.id}>
+                      {client.first_name} {client.last_name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Service *</label>
+                <select
+                  name="serviceId"
+                  required
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-primary-500 focus:border-primary-500"
+                >
+                  <option value="">Select a service</option>
+                  {services.map((service: any) => (
+                    <option key={service.id} value={service.id}>
+                      {service.name} ({service.duration_minutes} min) - ${service.price}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Staff *</label>
+                <select
+                  name="staffId"
+                  required
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-primary-500 focus:border-primary-500"
+                >
+                  <option value="">Select staff member</option>
+                  {staffList.map((staff: any) => (
+                    <option key={staff.id} value={staff.id}>
+                      {staff.first_name} {staff.last_name} - {staff.title}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Date *</label>
+                  <input
+                    type="date"
+                    name="date"
+                    required
+                    defaultValue={format(new Date(), 'yyyy-MM-dd')}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-primary-500 focus:border-primary-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Time *</label>
+                  <input
+                    type="time"
+                    name="time"
+                    required
+                    defaultValue="09:00"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-primary-500 focus:border-primary-500"
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Notes</label>
+                <textarea
+                  name="notes"
+                  rows={3}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-primary-500 focus:border-primary-500"
+                  placeholder="Any special requests or notes..."
+                />
+              </div>
+              <div className="flex justify-end space-x-3 pt-4">
+                <button type="button" onClick={() => setShowCreateModal(false)} className="btn btn-secondary">
+                  Cancel
+                </button>
+                <button type="submit" className="btn btn-primary">
+                  Create Appointment
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {deleteConfirm && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-md mx-4 p-6">
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">Delete Appointment</h3>
+            <p className="text-gray-600 mb-6">
+              Are you sure you want to delete the appointment for <strong>{deleteConfirm.clientName}</strong>?
+              This action cannot be undone.
+            </p>
+            <div className="flex justify-end space-x-3">
+              <button
+                onClick={() => setDeleteConfirm(null)}
+                className="btn btn-secondary"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmDelete}
+                className="btn bg-red-600 hover:bg-red-700 text-white"
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Appointment Modal */}
+      {editingAppointment && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-lg mx-4">
+            <div className="flex items-center justify-between p-6 border-b">
+              <h2 className="text-xl font-semibold text-gray-900">Edit Appointment</h2>
+              <button
+                onClick={() => setEditingAppointment(null)}
+                className="p-2 hover:bg-gray-100 rounded-full"
+              >
+                <span className="sr-only">Close</span>
+                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            <form
+              onSubmit={(e) => {
+                e.preventDefault()
+                const formData = new FormData(e.currentTarget)
+                handleUpdateAppointment({
+                  status: formData.get('status'),
+                  notes: formData.get('notes')
+                })
+              }}
+              className="p-6 space-y-4"
+            >
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Client</label>
+                <input
+                  type="text"
+                  value={editingAppointment.clientName}
+                  disabled
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Service</label>
+                <input
+                  type="text"
+                  value={editingAppointment.service}
+                  disabled
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Staff</label>
+                <input
+                  type="text"
+                  value={editingAppointment.staff}
+                  disabled
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Date & Time</label>
+                <input
+                  type="text"
+                  value={`${editingAppointment.date.toLocaleDateString()} at ${editingAppointment.startTime}`}
+                  disabled
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
+                <select
+                  name="status"
+                  defaultValue={editingAppointment.status}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-primary-500 focus:border-primary-500"
+                >
+                  <option value="scheduled">Scheduled</option>
+                  <option value="confirmed">Confirmed</option>
+                  <option value="in_progress">In Progress</option>
+                  <option value="completed">Completed</option>
+                  <option value="cancelled">Cancelled</option>
+                  <option value="no_show">No Show</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Notes</label>
+                <textarea
+                  name="notes"
+                  rows={3}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-primary-500 focus:border-primary-500"
+                  placeholder="Add notes..."
+                />
+              </div>
+              <div className="flex justify-end space-x-3 pt-4">
+                <button
+                  type="button"
+                  onClick={() => setEditingAppointment(null)}
+                  className="btn btn-secondary"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="btn btn-primary"
+                >
+                  Save Changes
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

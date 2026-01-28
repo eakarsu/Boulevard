@@ -11,6 +11,9 @@ import Services from '@/pages/Services'
 import Staff from '@/pages/Staff'
 import Settings from '@/pages/Settings'
 import BookingWidget from '@/pages/BookingWidget'
+import Analytics from '@/pages/Analytics'
+import Payments from '@/pages/Payments'
+import Notifications from '@/pages/Notifications'
 
 function App() {
   const { isAuthenticated, user } = useAuthStore()
@@ -36,6 +39,9 @@ function App() {
         <Route path="/services" element={<Services />} />
         <Route path="/staff" element={<Staff />} />
         <Route path="/settings" element={<Settings />} />
+        <Route path="/analytics" element={<Analytics />} />
+        <Route path="/payments" element={<Payments />} />
+        <Route path="/notifications" element={<Notifications />} />
         <Route path="/book/:businessId" element={<BookingWidget />} />
         <Route path="*" element={<Navigate to="/dashboard" replace />} />
       </Routes>

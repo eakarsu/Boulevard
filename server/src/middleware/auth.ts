@@ -33,18 +33,21 @@ export const authenticateToken = async (req: AuthRequest, res: Response, next: N
     }
 
     const user = userResult.rows[0]
-    
+    console.log('Auth middleware - User:', { id: user.id, email: user.email, role: user.role })
+
     // Get business ID if user is staff/owner
-    if (user.role === 'staff' || user.role === 'owner') {
+    if (user.role === 'staff' || user.role === 'owner' || user.role === 'manager') {
       const businessResult = await query(
         'SELECT business_id FROM staff WHERE user_id = $1 UNION SELECT id as business_id FROM businesses WHERE owner_id = $1',
         [user.id]
       )
-      
+      console.log('Auth middleware - Business lookup result:', businessResult.rows)
+
       if (businessResult.rows.length > 0) {
         user.businessId = businessResult.rows[0].business_id
       }
     }
+    console.log('Auth middleware - Final user:', { id: user.id, businessId: user.businessId })
 
     req.user = user
     next()

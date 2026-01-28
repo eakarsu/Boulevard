@@ -182,4 +182,98 @@ router.post('/', async (req: any, res) => {
   }
 })
 
+// Update staff member
+router.put('/:id', async (req: any, res) => {
+  try {
+    if (!req.user) {
+      return res.status(401).json({ error: 'User not authenticated' })
+    }
+
+    let businessId = req.user.businessId
+    if (!businessId) {
+      const businessResult = await query(
+        'SELECT id FROM businesses WHERE owner_id = $1 LIMIT 1',
+        [req.user.id]
+      )
+      if (businessResult.rows.length > 0) {
+        businessId = businessResult.rows[0].id
+      } else {
+        return res.status(404).json({ error: 'No business found for user' })
+      }
+    }
+
+    const { id } = req.params
+    const { first_name, last_name, email, phone, title, commission_rate, hourly_rate, is_active } = req.body
+
+    // Get staff record to find user_id
+    const staffRecord = await query(
+      'SELECT user_id FROM staff WHERE id = $1 AND business_id = $2',
+      [id, businessId]
+    )
+
+    if (staffRecord.rows.length === 0) {
+      return res.status(404).json({ error: 'Staff member not found' })
+    }
+
+    const userId = staffRecord.rows[0].user_id
+
+    // Update user record
+    await query(
+      `UPDATE users SET first_name = $1, last_name = $2, email = $3, phone = $4, updated_at = NOW()
+       WHERE id = $5`,
+      [first_name, last_name, email, phone, userId]
+    )
+
+    // Update staff record
+    const result = await query(
+      `UPDATE staff SET title = $1, commission_rate = $2, hourly_rate = $3, is_active = $4, updated_at = NOW()
+       WHERE id = $5 AND business_id = $6 RETURNING *`,
+      [title, commission_rate, hourly_rate, is_active, id, businessId]
+    )
+
+    res.json(result.rows[0])
+  } catch (error) {
+    console.error('Error updating staff:', error)
+    res.status(500).json({ error: 'Failed to update staff member' })
+  }
+})
+
+// Delete staff member
+router.delete('/:id', async (req: any, res) => {
+  try {
+    if (!req.user) {
+      return res.status(401).json({ error: 'User not authenticated' })
+    }
+
+    let businessId = req.user.businessId
+    if (!businessId) {
+      const businessResult = await query(
+        'SELECT id FROM businesses WHERE owner_id = $1 LIMIT 1',
+        [req.user.id]
+      )
+      if (businessResult.rows.length > 0) {
+        businessId = businessResult.rows[0].id
+      } else {
+        return res.status(404).json({ error: 'No business found for user' })
+      }
+    }
+
+    const { id } = req.params
+
+    const result = await query(
+      'DELETE FROM staff WHERE id = $1 AND business_id = $2 RETURNING *',
+      [id, businessId]
+    )
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Staff member not found' })
+    }
+
+    res.json({ message: 'Staff member deleted successfully', id })
+  } catch (error) {
+    console.error('Error deleting staff:', error)
+    res.status(500).json({ error: 'Failed to delete staff member' })
+  }
+})
+
 export default router

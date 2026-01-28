@@ -7,24 +7,34 @@ const router = express.Router()
 router.get('/', async (req: any, res) => {
   try {
     const { search, category } = req.query
-    
+
     if (!req.user) {
       return res.status(401).json({ error: 'User not authenticated' })
     }
-    
+
+    // Debug logging
+    console.log('=== Services Route Debug ===')
+    console.log('req.user:', JSON.stringify(req.user))
+
     // If businessId is not set, try to get it from the user's business ownership
     let businessId = req.user.businessId
+    console.log('Initial businessId from user:', businessId, 'Type:', typeof businessId)
+
     if (!businessId) {
+      console.log('Looking up business by owner_id:', req.user.id)
       const businessResult = await query(
         'SELECT id FROM businesses WHERE owner_id = $1 LIMIT 1',
         [req.user.id]
       )
+      console.log('Business lookup result:', JSON.stringify(businessResult.rows))
       if (businessResult.rows.length > 0) {
         businessId = businessResult.rows[0].id
+        console.log('Found businessId:', businessId)
       } else {
         return res.status(404).json({ error: 'No business found for user' })
       }
     }
+    console.log('Final businessId:', businessId, 'Type:', typeof businessId)
     
     let whereClause = 'WHERE s.business_id = $1'
     const params = [businessId]
@@ -188,6 +198,44 @@ router.put('/:id', async (req: any, res) => {
   } catch (error) {
     console.error('Error updating service:', error)
     res.status(500).json({ error: 'Failed to update service' })
+  }
+})
+
+// Delete service
+router.delete('/:id', async (req: any, res) => {
+  try {
+    if (!req.user) {
+      return res.status(401).json({ error: 'User not authenticated' })
+    }
+
+    let businessId = req.user.businessId
+    if (!businessId) {
+      const businessResult = await query(
+        'SELECT id FROM businesses WHERE owner_id = $1 LIMIT 1',
+        [req.user.id]
+      )
+      if (businessResult.rows.length > 0) {
+        businessId = businessResult.rows[0].id
+      } else {
+        return res.status(404).json({ error: 'No business found for user' })
+      }
+    }
+
+    const { id } = req.params
+
+    const result = await query(
+      'DELETE FROM services WHERE id = $1 AND business_id = $2 RETURNING *',
+      [id, businessId]
+    )
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Service not found' })
+    }
+
+    res.json({ message: 'Service deleted successfully', id })
+  } catch (error) {
+    console.error('Error deleting service:', error)
+    res.status(500).json({ error: 'Failed to delete service' })
   }
 })
 

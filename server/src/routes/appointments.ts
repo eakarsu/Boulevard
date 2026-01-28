@@ -151,4 +151,116 @@ router.post('/', async (req: any, res) => {
   }
 })
 
+// Update appointment
+router.put('/:id', async (req: any, res) => {
+  try {
+    if (!req.user) {
+      return res.status(401).json({ error: 'User not authenticated' })
+    }
+
+    const { id } = req.params
+    const { clientId, staffId, serviceId, startTime, endTime, status, notes } = req.body
+
+    // Build update query dynamically based on provided fields
+    const updates: string[] = []
+    const params: any[] = []
+    let paramCount = 0
+
+    if (clientId) {
+      paramCount++
+      updates.push(`client_id = $${paramCount}`)
+      params.push(clientId)
+    }
+    if (staffId) {
+      paramCount++
+      updates.push(`staff_id = $${paramCount}`)
+      params.push(staffId)
+    }
+    if (serviceId) {
+      paramCount++
+      updates.push(`service_id = $${paramCount}`)
+      params.push(serviceId)
+    }
+    if (startTime) {
+      paramCount++
+      updates.push(`start_time = $${paramCount}`)
+      params.push(startTime)
+    }
+    if (endTime) {
+      paramCount++
+      updates.push(`end_time = $${paramCount}`)
+      params.push(endTime)
+    }
+    if (status) {
+      paramCount++
+      updates.push(`status = $${paramCount}`)
+      params.push(status)
+    }
+    if (notes !== undefined) {
+      paramCount++
+      updates.push(`notes = $${paramCount}`)
+      params.push(notes)
+    }
+
+    if (updates.length === 0) {
+      return res.status(400).json({ error: 'No fields to update' })
+    }
+
+    paramCount++
+    updates.push(`updated_at = NOW()`)
+    params.push(id)
+
+    const result = await query(
+      `UPDATE appointments SET ${updates.join(', ')} WHERE id = $${paramCount} RETURNING *`,
+      params
+    )
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Appointment not found' })
+    }
+
+    // Emit real-time update
+    const io = req.app.get('io')
+    if (io) {
+      io.emit('appointment-updated', result.rows[0])
+    }
+
+    res.json(result.rows[0])
+  } catch (error) {
+    console.error('Error updating appointment:', error)
+    res.status(500).json({ error: 'Failed to update appointment' })
+  }
+})
+
+// Delete appointment
+router.delete('/:id', async (req: any, res) => {
+  try {
+    if (!req.user) {
+      return res.status(401).json({ error: 'User not authenticated' })
+    }
+
+    const { id } = req.params
+
+    const result = await query(
+      'DELETE FROM appointments WHERE id = $1 RETURNING *',
+      [id]
+    )
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Appointment not found' })
+    }
+
+    // Emit real-time update
+    const io = req.app.get('io')
+    if (io) {
+      io.emit('appointment-deleted', { id })
+    }
+
+    res.json({ message: 'Appointment deleted successfully', id })
+  } catch (error) {
+    console.error('Error deleting appointment:', error)
+    res.status(500).json({ error: 'Failed to delete appointment' })
+  }
+})
+
 export default router

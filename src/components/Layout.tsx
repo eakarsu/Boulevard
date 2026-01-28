@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
-import { 
+import {
   Calendar,
   Users,
   Settings,
@@ -10,7 +10,10 @@ import {
   Scissors,
   UserCheck,
   Bell,
-  Search
+  Search,
+  BarChart3,
+  CreditCard,
+  MessageSquare
 } from 'lucide-react'
 import { useAuthStore } from '@/stores/authStore'
 
@@ -24,6 +27,9 @@ const navigation = [
   { name: 'Clients', href: '/clients', icon: Users },
   { name: 'Services', href: '/services', icon: Scissors },
   { name: 'Staff', href: '/staff', icon: UserCheck },
+  { name: 'Analytics', href: '/analytics', icon: BarChart3 },
+  { name: 'Payments', href: '/payments', icon: CreditCard },
+  { name: 'Notifications', href: '/notifications', icon: MessageSquare },
   { name: 'Settings', href: '/settings', icon: Settings },
 ]
 

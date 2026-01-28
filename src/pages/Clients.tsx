@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react'
-import { Search, Plus, Mail, Phone, Calendar, DollarSign, Star, Filter } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
+import { Search, Plus, Mail, Phone, Calendar, DollarSign, Star, Filter, Edit2, Trash2 } from 'lucide-react'
 import { clientsAPI } from '../services/api'
+import { ClientDetailModal } from '../components/modals'
 
 interface Client {
   id: string
@@ -23,9 +25,11 @@ interface ClientStats {
 }
 
 export default function Clients() {
+  const navigate = useNavigate()
   const [searchTerm, setSearchTerm] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
   const [clients, setClients] = useState<Client[]>([])
+  const [selectedClient, setSelectedClient] = useState<Client | null>(null)
   const [stats, setStats] = useState<ClientStats>({
     total_clients: 0,
     active_clients: 0,
@@ -35,6 +39,9 @@ export default function Clients() {
   const [loading, setLoading] = useState(true)
   const [currentPage, setCurrentPage] = useState(1)
   const [totalPages, setTotalPages] = useState(1)
+  const [editingClient, setEditingClient] = useState<Client | null>(null)
+  const [deleteConfirm, setDeleteConfirm] = useState<Client | null>(null)
+  const [showCreateModal, setShowCreateModal] = useState(false)
 
   useEffect(() => {
     fetchClients()
@@ -99,13 +106,60 @@ export default function Clients() {
     }
   }
 
+  const handleEdit = (client: Client) => {
+    setSelectedClient(null)
+    setEditingClient(client)
+  }
+
+  const handleDelete = (client: Client) => {
+    setSelectedClient(null)
+    setDeleteConfirm(client)
+  }
+
+  const confirmDelete = async () => {
+    if (!deleteConfirm) return
+    try {
+      await clientsAPI.deleteClient(deleteConfirm.id)
+      setDeleteConfirm(null)
+      fetchClients()
+      fetchStats()
+    } catch (error) {
+      console.error('Error deleting client:', error)
+      alert('Failed to delete client')
+    }
+  }
+
+  const handleUpdateClient = async (updatedData: any) => {
+    if (!editingClient) return
+    try {
+      await clientsAPI.updateClient(editingClient.id, updatedData)
+      setEditingClient(null)
+      fetchClients()
+    } catch (error) {
+      console.error('Error updating client:', error)
+      alert('Failed to update client')
+    }
+  }
+
+  const handleCreateClient = async (clientData: any) => {
+    try {
+      await clientsAPI.createClient(clientData)
+      setShowCreateModal(false)
+      fetchClients()
+      fetchStats()
+    } catch (error) {
+      console.error('Error creating client:', error)
+      alert('Failed to create client')
+    }
+  }
+
   return (
     <div className="py-6">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8">
         {/* Header */}
         <div className="flex items-center justify-between">
           <h1 className="text-2xl font-semibold text-gray-900">Clients</h1>
-          <button className="btn-primary">
+          <button className="btn-primary" onClick={() => setShowCreateModal(true)}>
             <Plus className="h-4 w-4 mr-2" />
             Add Client
           </button>
@@ -266,7 +320,11 @@ export default function Clients() {
                     ))
                   ) : (
                     Array.isArray(clients) && clients.map((client) => (
-                      <tr key={client.id} className="hover:bg-gray-50">
+                      <tr
+                        key={client.id}
+                        className="hover:bg-gray-50 cursor-pointer transition-colors"
+                        onClick={() => setSelectedClient(client)}
+                      >
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex items-center">
                           <div className="h-10 w-10 rounded-full bg-primary-500 flex items-center justify-center">
@@ -279,7 +337,7 @@ export default function Clients() {
                               {client.first_name} {client.last_name}
                             </div>
                             <div className="text-sm text-gray-500">
-                              ID: {client.id}
+                              ID: {client.id.slice(0, 8)}...
                             </div>
                           </div>
                         </div>
@@ -303,14 +361,23 @@ export default function Clients() {
                         {client.last_visit ? new Date(client.last_visit).toLocaleDateString() : 'Never'}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                        <div className="flex space-x-2">
-                          <button className="text-primary-600 hover:text-primary-900">
+                        <div className="flex space-x-2" onClick={(e) => e.stopPropagation()}>
+                          <button
+                            className="text-primary-600 hover:text-primary-900"
+                            onClick={() => window.location.href = `mailto:${client.email}`}
+                          >
                             <Mail className="h-4 w-4" />
                           </button>
-                          <button className="text-primary-600 hover:text-primary-900">
+                          <button
+                            className="text-primary-600 hover:text-primary-900"
+                            onClick={() => window.location.href = `tel:${client.phone}`}
+                          >
                             <Phone className="h-4 w-4" />
                           </button>
-                          <button className="text-primary-600 hover:text-primary-900">
+                          <button
+                            className="text-primary-600 hover:text-primary-900"
+                            onClick={() => navigate('/calendar')}
+                          >
                             <Calendar className="h-4 w-4" />
                           </button>
                         </div>
@@ -324,6 +391,228 @@ export default function Clients() {
           </div>
         </div>
       </div>
+
+      {/* Client Detail Modal */}
+      {selectedClient && (
+        <ClientDetailModal
+          client={selectedClient}
+          onClose={() => setSelectedClient(null)}
+          onBookAppointment={() => {
+            setSelectedClient(null)
+            navigate('/calendar')
+          }}
+          onSendEmail={(client) => {
+            window.location.href = `mailto:${client.email}`
+          }}
+          onEdit={handleEdit}
+          onDelete={handleDelete}
+        />
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {deleteConfirm && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-md mx-4 p-6">
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">Delete Client</h3>
+            <p className="text-gray-600 mb-6">
+              Are you sure you want to delete <strong>{deleteConfirm.first_name} {deleteConfirm.last_name}</strong>?
+              This action cannot be undone.
+            </p>
+            <div className="flex justify-end space-x-3">
+              <button onClick={() => setDeleteConfirm(null)} className="btn btn-secondary">
+                Cancel
+              </button>
+              <button onClick={confirmDelete} className="btn bg-red-600 hover:bg-red-700 text-white">
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Create Client Modal */}
+      {showCreateModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-lg mx-4">
+            <div className="flex items-center justify-between p-6 border-b">
+              <h2 className="text-xl font-semibold text-gray-900">Add New Client</h2>
+              <button onClick={() => setShowCreateModal(false)} className="p-2 hover:bg-gray-100 rounded-full">
+                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            <form
+              onSubmit={(e) => {
+                e.preventDefault()
+                const formData = new FormData(e.currentTarget)
+                handleCreateClient({
+                  firstName: formData.get('first_name'),
+                  lastName: formData.get('last_name'),
+                  email: formData.get('email'),
+                  phone: formData.get('phone'),
+                  notes: formData.get('notes')
+                })
+              }}
+              className="p-6 space-y-4"
+            >
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">First Name *</label>
+                  <input
+                    type="text"
+                    name="first_name"
+                    required
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-primary-500 focus:border-primary-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Last Name *</label>
+                  <input
+                    type="text"
+                    name="last_name"
+                    required
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-primary-500 focus:border-primary-500"
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Email *</label>
+                <input
+                  type="email"
+                  name="email"
+                  required
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-primary-500 focus:border-primary-500"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Phone</label>
+                <input
+                  type="tel"
+                  name="phone"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-primary-500 focus:border-primary-500"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Notes</label>
+                <textarea
+                  name="notes"
+                  rows={3}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-primary-500 focus:border-primary-500"
+                />
+              </div>
+              <div className="flex justify-end space-x-3 pt-4">
+                <button type="button" onClick={() => setShowCreateModal(false)} className="btn btn-secondary">
+                  Cancel
+                </button>
+                <button type="submit" className="btn btn-primary">
+                  Add Client
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Client Modal */}
+      {editingClient && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-lg mx-4">
+            <div className="flex items-center justify-between p-6 border-b">
+              <h2 className="text-xl font-semibold text-gray-900">Edit Client</h2>
+              <button onClick={() => setEditingClient(null)} className="p-2 hover:bg-gray-100 rounded-full">
+                <span className="sr-only">Close</span>
+                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            <form
+              onSubmit={(e) => {
+                e.preventDefault()
+                const formData = new FormData(e.currentTarget)
+                handleUpdateClient({
+                  first_name: formData.get('first_name'),
+                  last_name: formData.get('last_name'),
+                  email: formData.get('email'),
+                  phone: formData.get('phone'),
+                  status: formData.get('status'),
+                  notes: formData.get('notes')
+                })
+              }}
+              className="p-6 space-y-4"
+            >
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">First Name</label>
+                  <input
+                    type="text"
+                    name="first_name"
+                    defaultValue={editingClient.first_name}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-primary-500 focus:border-primary-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Last Name</label>
+                  <input
+                    type="text"
+                    name="last_name"
+                    defaultValue={editingClient.last_name}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-primary-500 focus:border-primary-500"
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                <input
+                  type="email"
+                  name="email"
+                  defaultValue={editingClient.email}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-primary-500 focus:border-primary-500"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Phone</label>
+                <input
+                  type="tel"
+                  name="phone"
+                  defaultValue={editingClient.phone}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-primary-500 focus:border-primary-500"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
+                <select
+                  name="status"
+                  defaultValue={editingClient.status}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-primary-500 focus:border-primary-500"
+                >
+                  <option value="active">Active</option>
+                  <option value="vip">VIP</option>
+                  <option value="inactive">Inactive</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Notes</label>
+                <textarea
+                  name="notes"
+                  rows={3}
+                  defaultValue={editingClient.notes || ''}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-primary-500 focus:border-primary-500"
+                />
+              </div>
+              <div className="flex justify-end space-x-3 pt-4">
+                <button type="button" onClick={() => setEditingClient(null)} className="btn btn-secondary">
+                  Cancel
+                </button>
+                <button type="submit" className="btn btn-primary">
+                  Save Changes
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
