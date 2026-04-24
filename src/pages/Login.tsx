@@ -53,6 +53,11 @@ export default function Login() {
             </p>
           </div>
         </div>
+        <div className="p-3 bg-amber-50 border border-amber-200 rounded-md">
+          <p className="text-sm text-amber-800">
+            <strong>Note:</strong> Password reset is not implemented. If you forget your password, there is no recovery flow.
+          </p>
+        </div>
         <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
           <div className="rounded-md shadow-sm -space-y-px">
             <div>

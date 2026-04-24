@@ -45,6 +45,8 @@ export default function Payments() {
   const [detailPayment, setDetailPayment] = useState<Payment | null>(null)
   const [refundAmount, setRefundAmount] = useState('')
   const [refundReason, setRefundReason] = useState('')
+  const [editingPayment, setEditingPayment] = useState<Payment | null>(null)
+  const [deleteConfirm, setDeleteConfirm] = useState<Payment | null>(null)
 
   useEffect(() => {
     fetchData()
@@ -343,7 +345,144 @@ export default function Payments() {
             setSelectedPayment(payment)
             setShowRefundModal(true)
           }}
+          onEdit={(payment) => {
+            setDetailPayment(null)
+            setEditingPayment(payment)
+          }}
+          onDelete={(payment) => {
+            setDetailPayment(null)
+            setDeleteConfirm(payment)
+          }}
         />
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {deleteConfirm && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-md mx-4 p-6">
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">Delete Payment</h3>
+            <p className="text-gray-600 mb-6">
+              Are you sure you want to delete this payment of <strong>{formatCurrency(deleteConfirm.total)}</strong> for{' '}
+              <strong>{deleteConfirm.first_name} {deleteConfirm.last_name}</strong>?
+              This action cannot be undone.
+            </p>
+            <div className="flex justify-end space-x-3">
+              <button onClick={() => setDeleteConfirm(null)} className="btn btn-secondary">
+                Cancel
+              </button>
+              <button
+                onClick={() => {
+                  // In a real app, call API to delete payment
+                  console.log('Delete payment:', deleteConfirm.id)
+                  setDeleteConfirm(null)
+                  fetchData()
+                }}
+                className="btn bg-red-600 hover:bg-red-700 text-white"
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Payment Modal */}
+      {editingPayment && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-lg mx-4">
+            <div className="flex items-center justify-between p-6 border-b">
+              <h2 className="text-xl font-semibold text-gray-900">Edit Payment</h2>
+              <button onClick={() => setEditingPayment(null)} className="p-2 hover:bg-gray-100 rounded-full">
+                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            <form
+              onSubmit={(e) => {
+                e.preventDefault()
+                const formData = new FormData(e.currentTarget)
+                console.log('Update payment:', {
+                  id: editingPayment.id,
+                  amount: formData.get('amount'),
+                  tip: formData.get('tip'),
+                  method: formData.get('method'),
+                  status: formData.get('status')
+                })
+                setEditingPayment(null)
+                fetchData()
+              }}
+              className="p-6 space-y-4"
+            >
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Amount ($)</label>
+                  <input
+                    type="number"
+                    name="amount"
+                    step="0.01"
+                    defaultValue={editingPayment.amount}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-primary-500 focus:border-primary-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Tip ($)</label>
+                  <input
+                    type="number"
+                    name="tip"
+                    step="0.01"
+                    defaultValue={editingPayment.tip}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-primary-500 focus:border-primary-500"
+                  />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Method</label>
+                  <select
+                    name="method"
+                    defaultValue={editingPayment.method}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-primary-500 focus:border-primary-500"
+                  >
+                    <option value="card">Card</option>
+                    <option value="cash">Cash</option>
+                    <option value="gift_card">Gift Card</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
+                  <select
+                    name="status"
+                    defaultValue={editingPayment.status}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-primary-500 focus:border-primary-500"
+                  >
+                    <option value="completed">Completed</option>
+                    <option value="pending">Pending</option>
+                    <option value="failed">Failed</option>
+                    <option value="refunded">Refunded</option>
+                  </select>
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Client</label>
+                <input
+                  type="text"
+                  disabled
+                  value={`${editingPayment.first_name} ${editingPayment.last_name}`}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50 text-gray-500"
+                />
+              </div>
+              <div className="flex justify-end space-x-3 pt-4">
+                <button type="button" onClick={() => setEditingPayment(null)} className="btn btn-secondary">
+                  Cancel
+                </button>
+                <button type="submit" className="btn btn-primary">
+                  Save Changes
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
       )}
 
       {/* Refund Modal */}

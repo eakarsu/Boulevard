@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Calendar, Users, DollarSign, Clock, TrendingUp, TrendingDown, Star, Award, Target, BarChart3 } from 'lucide-react'
+import { Calendar, Users, DollarSign, Clock, TrendingUp, TrendingDown, Star, Award, Target, BarChart3, AlertCircle, Database } from 'lucide-react'
+import axios from 'axios'
 import { appointmentsAPI, clientsAPI, servicesAPI, staffAPI } from '../services/api'
 import { AppointmentDetailModal } from '../components/modals'
+import { featureConfigs, categoryColors, categoryLabels } from '../data/featureConfig'
 
 interface DashboardStats {
   totalRevenue: number
@@ -63,6 +65,8 @@ export default function Dashboard() {
   const [topServices, setTopServices] = useState<TopService[]>([])
   const [staffPerformance, setStaffPerformance] = useState<StaffPerformance[]>([])
   const [loading, setLoading] = useState(true)
+  const [seeding, setSeeding] = useState(false)
+  const [seedResult, setSeedResult] = useState<string | null>(null)
 
   useEffect(() => {
     const fetchDashboardData = async () => {
@@ -135,6 +139,24 @@ export default function Dashboard() {
 
     fetchDashboardData()
   }, [])
+
+  const handleSeedDatabase = async () => {
+    setSeeding(true)
+    setSeedResult(null)
+    try {
+      const API_BASE = import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:8000'
+      // First seed basic data, then feature data
+      await axios.post(`${API_BASE}/api/debug/seed`)
+      const res = await axios.post(`${API_BASE}/api/debug/seed-features`)
+      setSeedResult(`Seeded: ${Object.entries(res.data.counts || {}).map(([k, v]) => `${k}: ${v}`).join(', ')}`)
+      // Refresh dashboard data
+      window.location.reload()
+    } catch (error: any) {
+      setSeedResult(`Error: ${error.message}`)
+    } finally {
+      setSeeding(false)
+    }
+  }
 
   const statsConfig = [
     {
@@ -215,7 +237,22 @@ export default function Dashboard() {
   return (
     <div className="py-6">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8">
-        <h1 className="text-2xl font-semibold text-gray-900">Dashboard</h1>
+        <div className="flex items-center justify-between">
+          <h1 className="text-2xl font-semibold text-gray-900">Dashboard</h1>
+          <button
+            onClick={handleSeedDatabase}
+            disabled={seeding}
+            className="btn btn-secondary flex items-center space-x-2"
+          >
+            <Database className={`h-4 w-4 ${seeding ? 'animate-spin' : ''}`} />
+            <span>{seeding ? 'Seeding...' : 'Seed Database'}</span>
+          </button>
+        </div>
+        {seedResult && (
+          <div className={`mt-2 p-3 rounded-md text-sm ${seedResult.startsWith('Error') ? 'bg-red-50 text-red-700' : 'bg-green-50 text-green-700'}`}>
+            {seedResult}
+          </div>
+        )}
       </div>
       
       <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8">
@@ -429,6 +466,49 @@ export default function Dashboard() {
                     </div>
                   </div>
                 ))}
+              </div>
+            </div>
+          </div>
+        </div>
+        {/* Feature Status */}
+        <div className="mt-8">
+          <div className="card">
+            <div className="card-header">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-lg leading-6 font-medium text-gray-900">
+                    Feature Status
+                  </h3>
+                  <p className="mt-1 text-sm text-gray-500">
+                    {featureConfigs.length} features intentionally not implemented
+                  </p>
+                </div>
+                <button
+                  onClick={() => navigate('/features')}
+                  className="btn btn-secondary text-sm"
+                >
+                  View All
+                </button>
+              </div>
+            </div>
+            <div className="card-body">
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
+                {featureConfigs.map((feature) => {
+                  const FeatureIcon = feature.icon
+                  return (
+                    <div
+                      key={feature.id}
+                      onClick={() => navigate(feature.redirectTo || `/features/${feature.id}`)}
+                      className="flex flex-col items-center p-3 rounded-lg bg-gray-50 hover:bg-red-50 cursor-pointer transition-colors group border border-transparent hover:border-red-200"
+                    >
+                      <FeatureIcon className="h-5 w-5 text-gray-400 group-hover:text-red-500 mb-2" />
+                      <p className="text-xs font-medium text-gray-700 text-center leading-tight mb-1">{feature.name}</p>
+                      <span className="inline-flex px-1.5 py-0.5 rounded text-[10px] font-medium bg-red-100 text-red-600">
+                        Missing
+                      </span>
+                    </div>
+                  )
+                })}
               </div>
             </div>
           </div>

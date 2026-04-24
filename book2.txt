@@ -1,0 +1,52 @@
+BoulevardDeveloper
+Search Docs...
+Client API
+Support
+or
+Queries
+cartBookableDates
+[[CartBookableDate!]]
+Retrieves available dates for all bookable cart items.
+
+
+The search range may be arbitrarily large, but the number of available dates
+returned is limited by the limit argument, which defaults to 31.
+
+
+Note that the search range is always clamped to the location's minimum and
+maximum booking lead times.
+
+
+Arguments
+Field	Type	Description
+id
+ID!
+ID of the cart.
+limit
+Int
+How many dates to fetch. Lower numbers are recommended to reduce the query time and improve user experience. The maximum and default value is 31.
+locationId
+ID
+ID of the location. Can be used to query for bookable dates for different location before a single location is set for the cart.
+searchRangeLower
+Date
+Lower (inclusive) search range bound. When null, the current date plus the location's minimum booking lead time (i.e. the earliest possible date to book) is used.
+searchRangeUpper
+Date
+Upper (inclusive) search range bound. When null, the lower bound plus one week is used.
+staffVariantIds
+[ID!]
+Optional list of staff variant IDs, overrides the selected variants of the item (if any) during the lookup. Multiple staff variant IDs can be specified for the same service, which returns their combined dates.
+tz
+Tz
+Optional time zone the matches should be converted to, e.g. the client's time zone. The search range dates are also interpreted using this. When null, the location's time zone is used.
+Fields
+Field	Type	Description
+date
+Date!
+Available date for the bookable items. Note that this date may differ from the one at the location when a specific time zone is requested using the `tz` argument. The date uses the requested time zone, or the location's time zone when `tz` is null.
+v2020-01
+On this page
+Powered by Boulevard
+
+

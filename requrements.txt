@@ -1,0 +1,155 @@
+# Comprehensive Aider Prompt for Building Boulevard Clone from Scratch
+
+Based on your browser screenshot showing the Boulevard platform and the comprehensive feature set, here's a complete Aider prompt for rebuilding Boulevard from zero:
+
+```
+You are an expert full-stack developer tasked with creating a complete Boulevard clone - a comprehensive client experience platform for appointment-based, self-care businesses (salons, spas, barbershops, wellness centers). This system should be production-ready, scalable, and include all Boulevard's core features.
+
+## PROJECT OVERVIEW
+Create a modern, web-based client experience platform using React/TypeScript frontend, Node.js/Express backend, PostgreSQL database, and real-time capabilities. The system should support multi-location businesses with advanced scheduling optimization.
+
+## CORE SYSTEM ARCHITECTURE
+
+### Frontend Requirements (React/TypeScript)
+- Modern responsive UI using Tailwind CSS with Boulevard's clean aesthetic
+- Real-time updates using WebSocket connections for live booking updates
+- Mobile-first design optimized for tablets and smartphones
+- Touch-friendly interface for service providers
+- Client self-booking portal with real-time availability
+- Staff dashboard with color-coded scheduling interface
+- Role-based access control (Owner, Manager, Staff, Client)
+- Progressive Web App (PWA) capabilities for offline functionality
+
+### Backend Requirements (Node.js/Express)
+- RESTful API with GraphQL integration for complex queries
+- JWT authentication with refresh token rotation
+- Real-time WebSocket server for live schedule updates
+- Payment gateway integration (Stripe, Square)
+- SMS/Email notification system (Twilio, SendGrid)
+- Advanced scheduling algorithm (Precision Scheduling™ clone)
+- Multi-tenant architecture for franchise support
+- Comprehensive audit logging and analytics
+- Data backup and disaster recovery systems
+
+### Database Schema (PostgreSQL)
+Design complete database with these core entities:
+- **Users**: roles (owner, manager, staff, client), authentication, preferences
+- **Businesses**: multi-location support, settings, branding
+- **Locations**: address, hours, capacity, staff assignments
+- **Services**: categories, duration, pricing, staff requirements
+- **Staff**: skills, availability, commission rates, performance metrics
+- **Clients**: profiles, history, preferences, loyalty points
+- **Appointments**: bookings, status, notes, payments
+- **Availability**: staff schedules, time blocks, exceptions
+- **Payments**: transactions, methods, refunds, tips
+- **Inventory**: products, stock levels, suppliers
+- **Marketing**: campaigns, automations, loyalty programs
+- **Reports**: analytics, performance metrics, financial data
+
+## BOULEVARD'S SIGNATURE FEATURES TO IMPLEMENT
+
+### 1. Precision Scheduling™ (Core Innovation)
+- **Intelligent Gap Filling**: Algorithm that automatically optimizes calendar gaps
+- **Dynamic Service Timing**: Adjusts appointment duration based on client history
+- **Staff Optimization**: Matches clients with best-suited staff members
+- **Capacity Management**: Maximizes bookings while preventing overbooking
+- **Real-time Availability**: Updates availability across all booking channels instantly
+- **Conflict Resolution**: Automatically handles scheduling conflicts and suggests alternatives
+
+### 2. 24/7 Client Self-Booking Experience
+- **Real-time Availability Display**: Shows exact available time slots
+- **Service Selection Wizard**: Guided booking flow with service recommendations
+- **Staff Preference Matching**: Allows clients to book with preferred providers
+- **Instant Confirmation**: Immediate booking confirmation with calendar integration
+- **Automated Reminders**: SMS/Email reminders with 25% no-show reduction target
+- **Rebooking Functionality**: Easy rescheduling and cancellation options
+
+### 3. All-in-One POS System (Beauty/Wellness Focused)
+- **Service-Specific Checkout**: Optimized for beauty/wellness transactions
+- **Commission Tracking**: Automatic staff commission calculations
+- **Tip Management**: Digital tip processing and distribution
+- **Gift Card System**: Digital gift cards with promotional capabilities
+- **Loyalty Program Integration**: Points, rewards, and membership management
+- **Inventory Integration**: Real-time product sales and stock updates
+- **Payment Flexibility**: Multiple payment methods, split payments, deposits
+
+### 4. Marketing & Client Retention Tools
+- **Automated Marketing Campaigns**: Email/SMS marketing with triggers
+- **Client Segmentation**: Advanced targeting based on behavior and preferences
+- **Loyalty Programs**: Points, tiers, rewards, and referral systems
+- **Membership Management**: Recurring services and subscription models
+- **Review Management**: Automated review requests and reputation monitoring
+- **Social Media Integration**: Booking widgets for social platforms
+
+### 5. Advanced Analytics & Reporting
+- **Real-time Dashboard**: Key metrics, revenue, bookings, staff performance
+- **Revenue Analytics**: Detailed financial reporting with profit margins
+- **Client Analytics**: Lifetime value, retention rates, booking patterns
+- **Staff Performance**: Individual metrics, commission tracking, productivity
+- **Inventory Reports**: Stock levels, sales performance, reorder alerts
+- **Marketing ROI**: Campaign performance and conversion tracking
+
+## TECHNICAL SPECIFICATIONS
+
+### Precision Scheduling Algorithm
+Implement Boulevard's core scheduling intelligence:
+```
+interface SchedulingEngine {
+  optimizeCalendar(locationId: string, date: Date): Promise;
+  findAvailableSlots(serviceId: string, staffId?: string, duration: number): Promise;
+  calculateServiceDuration(serviceId: string, clientId: string): Promise;
+  resolveConflicts(appointments: Appointment[]): Promise;
+  maximizeCapacity(location: Location, date: Date): Promise;
+}
+```
+
+### Real-time Synchronization
+- WebSocket implementation for live booking updates
+- Optimistic UI updates with conflict resolution
+- Multi-device synchronization for staff and clients
+- Real-time availability updates across all booking channels
+
+### Security & Compliance
+- PCI DSS compliance for payment processing
+- HIPAA compliance for medical spa clients
+- SOC 2 Type II security standards
+- Data encryption at rest and in transit
+- Regular security audits and penetration testing
+
+### Performance Requirements
+- Sub-second booking confirmation times
+- Support for 10,000+ concurrent users
+- 99.9% uptime SLA
+- Mobile-optimized performance (90%)
+
+## BOULEVARD-SPECIFIC SUCCESS METRICS
+- **Booking Conversion Rate**: >85% (Boulevard standard)
+- **No-show Reduction**: 25% improvement with automated reminders
+- **Calendar Optimization**: 15% increase in bookings through gap filling
+- **Client Retention**: 90% retention rate through loyalty programs
+- **Staff Efficiency**: 20% productivity improvement through optimized scheduling
+
+Start by implementing the core scheduling engine and authentication system. Focus on creating the intelligent scheduling algorithm that makes Boulevard unique. Then build the client booking experience with real-time availability updates.
+
+Ensure all code follows Boulevard's design principles: intuitive, color-coded interfaces, mobile-first design, and service-industry-specific workflows. The system should feel purpose-built for beauty and wellness businesses, not a generic scheduling tool.
+
+Prioritize the Precision Scheduling™ algorithm as this is Boulevard's core differentiator. Implement intelligent gap filling, dynamic service timing, and capacity optimization to maximize revenue for business owners.
+```
+
+## **Additional Considerations for Your Implementation**
+
+### **Integration with Your Existing Infrastructure**
+Since you have experience with:
+- **Docker containerization** - Use for Boulevard clone deployment
+- **React/TypeScript development** - Leverage for frontend development
+- **API integration expertise** - Apply to payment and communication APIs
+- **Multi-sector platforms** - Extend to support various service industries
+
+### **Aider-Specific Execution Strategy**
+When using this prompt with Aider:
+- **Break into logical phases** to manage token limits effectively
+- **Use `--max-chat-history-tokens`** to maintain context
+- **Commit after each major feature** to create checkpoints
+- **Focus on one subsystem at a time** (scheduling, payments, etc.)
+
+

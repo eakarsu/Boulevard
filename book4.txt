@@ -1,0 +1,24 @@
+BoulevardDeveloper
+Search Docs...
+Client API
+Support
+or
+Types
+AddCartCardPaymentMethodInput
+[Input Object]
+Fields
+Field	Type	Description
+id
+ID!
+ID of the cart
+select
+Boolean
+Whether to automatically select this credit card as the payment method for the cart, false by default.
+token
+ID!
+Credit card token obtained from the Credit Card Tokenization endpoint.
+v2020-01
+On this page
+Powered by Boulevard
+
+

@@ -1,0 +1,234 @@
+BoulevardDeveloper
+Search Docs...
+Client API
+Support
+or
+Retrieving Client Information
+Learn how to supplement the Booking API with additional client information to create a customized and unique client experience.
+
+Note: Client specific data like past appointments requires the use of a scoped and authenticated client token. Please refer to the Authenticated Client API Access in the Client API overview for more information on how to generate an authenticated client token.
+
+Retrieving Client Appointment History
+The below query filter queries for appointments before a specific date and at a specific location. If no search query is supplied, the default response will return all appointments (past and future) for all locations.
+
+See AppointmentConnection for the full API reference.
+
+query {
+  myAppointments(
+    first: 20,
+    query: "startAt <= '2020-07-30T00:00:00-07:00' AND locationId = 'urn:blvd:Location:fc647375-0946-4ad8-8cce-57dfc34189c8'"
+  ) {
+    edges {
+      node {
+        id
+        startAt
+        endAt
+        duration
+        cancelled
+        state
+        clientId
+        client {
+          id
+          name
+        }
+        location {
+          id
+          name
+          businessName
+        }
+        notes
+        appointmentServices {
+          price
+          startAt
+          endAt
+          startTimeOffset
+          totalDuration
+          duration
+          staffId
+          staff {
+            id
+            firstName
+            lastName
+          }
+          serviceId
+          service {
+            name
+            categoryId
+            category {
+              name
+            }
+          }
+        }
+      }
+    }
+  }
+}
+SHOW RESULTS
+HTTP/1.1 200 OK
+{
+  "data": {
+    "myAppointments": {
+      "edges": [
+        {
+          "node": {
+            "state": "FINAL",
+            "startAt": "2020-04-28T15:00:00-07:00",
+            "notes": "",
+            "location": {
+              "name": "Santa Monica",
+              "id": "urn:blvd:Location:fc647375-0946-4ad8-8cce-57dfc34189c8",
+              "businessName": "Jentleman J's"
+            },
+            "id": "urn:blvd:Appointment:8745acfc-90b6-4950-b505-70a21d2b6325",
+            "endAt": "2020-04-28T15:45:00-07:00",
+            "duration": 45,
+            "clientId": "urn:blvd:Client:807c25e8-5f38-4451-a0b6-373a81e13776",
+            "client": {
+              "name": "Jeffry Ankunding",
+              "id": "urn:blvd:Client:807c25e8-5f38-4451-a0b6-373a81e13776"
+            },
+            "cancelled": false,
+            "appointmentServices": [
+              {
+                "totalDuration": 45,
+                "startTimeOffset": 0,
+                "startAt": "2020-04-28T15:00:00-07:00",
+                "staffId": "urn:blvd:Staff:d55d5645-37f8-4f7c-8b4b-6cc3721bba8e",
+                "staff": {
+                  "lastName": "Stein",
+                  "id": "urn:blvd:Staff:d55d5645-37f8-4f7c-8b4b-6cc3721bba8e",
+                  "firstName": "Julia"
+                },
+                "serviceId": "urn:blvd:Service:2ad62345-4b54-4079-80b4-c21b72240349",
+                "service": {
+                  "name": "The Razor Fade",
+                  "categoryId": "urn:blvd:ServiceCategory:77f89712-f685-42c9-a082-7cc0ea85b3bf",
+                  "category": {
+                    "name": "Haircuts"
+                  }
+                },
+                "price": 3800,
+                "endAt": "2020-04-28T15:45:00-07:00",
+                "duration": 40
+              }
+            ]
+          }
+        },
+        {
+          "node": {
+            "state": "FINAL",
+            "startAt": "2020-02-09T11:15:00-08:00",
+            "notes": "",
+            "location": {
+              "name": "Santa Monica",
+              "id": "urn:blvd:Location:fc647375-0946-4ad8-8cce-57dfc34189c8",
+              "businessName": "Jentleman J's"
+            },
+            "id": "urn:blvd:Appointment:fad69b14-b0c7-4e87-a2b2-9142030fd01b",
+            "endAt": "2020-02-09T12:00:00-08:00",
+            "duration": 45,
+            "clientId": "urn:blvd:Client:807c25e8-5f38-4451-a0b6-373a81e13776",
+            "client": {
+              "name": "Jeffry Ankunding",
+              "id": "urn:blvd:Client:807c25e8-5f38-4451-a0b6-373a81e13776"
+            },
+            "cancelled": false,
+            "appointmentServices": [
+              {
+                "totalDuration": 45,
+                "startTimeOffset": 0,
+                "startAt": "2020-02-09T11:15:00-08:00",
+                "staffId": "urn:blvd:Staff:14df9649-cf25-498d-b8fe-4f3d6633ec7b",
+                "staff": {
+                  "lastName": "Nagle",
+                  "id": "urn:blvd:Staff:14df9649-cf25-498d-b8fe-4f3d6633ec7b",
+                  "firstName": "Ben"
+                },
+                "serviceId": "urn:blvd:Service:48e82d09-cf5b-44da-8e74-155a8c84b357",
+                "service": {
+                  "name": "The Head Shave",
+                  "categoryId": "urn:blvd:ServiceCategory:77f89712-f685-42c9-a082-7cc0ea85b3bf",
+                  "category": {
+                    "name": "Haircuts"
+                  }
+                },
+                "price": 3800,
+                "endAt": "2020-02-09T12:00:00-08:00",
+                "duration": 40
+              }
+            ]
+          }
+        }
+      ]
+    }
+  }
+}
+Retrieving Client Memberships
+Display membership status and details in your custom client experience.
+
+See MembershipConnection for the full API reference.
+
+query {
+  myMemberships(first: 10) {
+    edges {
+      cursor
+      node {
+        termNumber
+        startOn
+        endOn
+        clientId
+        client {
+          firstName
+          lastName
+        }
+        status
+        name
+        vouchers {
+          quantity
+          service {
+            id
+            name
+          }
+        }
+      }
+    }
+  }
+}
+SHOW RESULTS
+HTTP/1.1 200 OK
+{
+  "data": {
+    "myMemberships": {
+      "edges": [
+        {
+          "node": {
+            "vouchers": [
+              {
+                "service": {
+                  "name": "The Jentlemanicure",
+                  "id": "urn:blvd:Service:a717911b-d442-4d6c-94d5-faffb235e591"
+                },
+                "quantity": 1
+              }
+            ],
+            "termNumber": 6,
+            "status": "ACTIVE",
+            "startOn": "2020-04-16",
+            "name": "Jentlemanicure Membership",
+            "endOn": "2020-10-16",
+            "clientId": "urn:blvd:Client:c6bc0829-2d15-49bc-b397-e98b54f30da0",
+            "client": {
+              "lastName": "Runolfsson",
+              "firstName": "Melany"
+            }
+          },
+          "cursor": "YXJyYXljb25uZWN0aW9uOjA="
+        }
+      ]
+    }
+  }
+}
+v2020-01
+Powered by Boulevard
+
+

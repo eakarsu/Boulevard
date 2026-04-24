@@ -1,0 +1,27 @@
+BoulevardDeveloper
+Search Docs...
+Client API
+Support
+or
+Mutations
+addCartCardPaymentMethod
+[AddCartCardPaymentMethodPayload]
+Add a credit card payment method to a cart.
+
+
+The tokens can be retrieved using the appropriate client-side library.
+
+
+Arguments
+Field	Type	Description
+input
+AddCartCardPaymentMethodInput!
+Fields
+Field	Type	Description
+cart
+Cart!
+v2020-01
+On this page
+Powered by Boulevard
+
+

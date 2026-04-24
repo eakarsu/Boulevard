@@ -1,5 +1,5 @@
 import React from 'react'
-import { X, CreditCard, DollarSign, User, Calendar, Clock, FileText, RefreshCw } from 'lucide-react'
+import { X, CreditCard, DollarSign, User, Calendar, Clock, FileText, RefreshCw, Edit, Trash2 } from 'lucide-react'
 
 interface Payment {
   id: string
@@ -24,9 +24,11 @@ interface PaymentDetailModalProps {
   payment: Payment
   onClose: () => void
   onRefund?: (payment: Payment) => void
+  onEdit?: (payment: Payment) => void
+  onDelete?: (payment: Payment) => void
 }
 
-export default function PaymentDetailModal({ payment, onClose, onRefund }: PaymentDetailModalProps) {
+export default function PaymentDetailModal({ payment, onClose, onRefund, onEdit, onDelete }: PaymentDetailModalProps) {
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount || 0)
   }
@@ -53,7 +55,7 @@ export default function PaymentDetailModal({ payment, onClose, onRefund }: Payme
         <div className="flex items-center justify-between p-6 border-b">
           <div>
             <h2 className="text-xl font-semibold text-gray-900">Payment Details</h2>
-            <p className="text-sm text-gray-500">Transaction #{payment.id.slice(0, 8)}</p>
+            <p className="text-sm text-gray-500">Transaction #{payment.id.toString().slice(0, 8)}</p>
           </div>
           <button
             onClick={onClose}
@@ -151,22 +153,40 @@ export default function PaymentDetailModal({ payment, onClose, onRefund }: Payme
         </div>
 
         {/* Actions */}
-        <div className="flex items-center justify-end space-x-3 px-6 py-4 bg-gray-50 rounded-b-lg">
-          <button
-            onClick={onClose}
-            className="btn btn-secondary"
-          >
-            Close
-          </button>
-          {payment.status === 'completed' && (
+        <div className="flex items-center justify-between px-6 py-4 bg-gray-50 rounded-b-lg">
+          <div className="flex items-center space-x-2">
             <button
-              onClick={() => onRefund?.(payment)}
-              className="btn bg-red-600 hover:bg-red-700 text-white flex items-center space-x-2"
+              onClick={() => onEdit?.(payment)}
+              className="btn bg-blue-100 hover:bg-blue-200 text-blue-700 flex items-center space-x-2"
             >
-              <RefreshCw className="h-4 w-4" />
-              <span>Refund</span>
+              <Edit className="h-4 w-4" />
+              <span>Edit</span>
             </button>
-          )}
+            <button
+              onClick={() => onDelete?.(payment)}
+              className="btn bg-red-100 hover:bg-red-200 text-red-700 flex items-center space-x-2"
+            >
+              <Trash2 className="h-4 w-4" />
+              <span>Delete</span>
+            </button>
+          </div>
+          <div className="flex items-center space-x-3">
+            <button
+              onClick={onClose}
+              className="btn btn-secondary"
+            >
+              Close
+            </button>
+            {payment.status === 'completed' && (
+              <button
+                onClick={() => onRefund?.(payment)}
+                className="btn bg-red-600 hover:bg-red-700 text-white flex items-center space-x-2"
+              >
+                <RefreshCw className="h-4 w-4" />
+                <span>Refund</span>
+              </button>
+            )}
+          </div>
         </div>
       </div>
     </div>

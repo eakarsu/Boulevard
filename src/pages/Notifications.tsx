@@ -4,6 +4,7 @@ import {
   CheckCircle, XCircle, AlertCircle, Plus, Trash2, Edit
 } from 'lucide-react'
 import { notificationsAPI } from '../services/api'
+import { NotificationDetailModal } from '../components/modals'
 
 interface NotificationLog {
   id: string
@@ -36,6 +37,8 @@ export default function Notifications() {
   const [showTemplateModal, setShowTemplateModal] = useState(false)
   const [showTestModal, setShowTestModal] = useState(false)
   const [editingTemplate, setEditingTemplate] = useState<NotificationTemplate | null>(null)
+  const [selectedNotification, setSelectedNotification] = useState<NotificationLog | null>(null)
+  const [deleteConfirmNotif, setDeleteConfirmNotif] = useState<NotificationLog | null>(null)
 
   // Template form state
   const [templateForm, setTemplateForm] = useState({
@@ -248,7 +251,11 @@ export default function Notifications() {
                     </tr>
                   ) : (
                     notificationLog.map((log) => (
-                      <tr key={log.id} className="hover:bg-gray-50">
+                      <tr
+                        key={log.id}
+                        className="hover:bg-gray-50 cursor-pointer transition-colors"
+                        onClick={() => setSelectedNotification(log)}
+                      >
                         <td className="px-6 py-4 whitespace-nowrap">
                           <div>
                             {log.first_name && (
@@ -419,6 +426,52 @@ export default function Notifications() {
           </div>
         )}
       </div>
+
+      {/* Notification Detail Modal */}
+      {selectedNotification && (
+        <NotificationDetailModal
+          notification={selectedNotification}
+          onClose={() => setSelectedNotification(null)}
+          onEdit={(notification) => {
+            setSelectedNotification(null)
+            // For notification logs, editing means re-sending or updating
+            console.log('Edit notification:', notification.id)
+          }}
+          onDelete={(notification) => {
+            setSelectedNotification(null)
+            setDeleteConfirmNotif(notification)
+          }}
+        />
+      )}
+
+      {/* Delete Notification Confirmation */}
+      {deleteConfirmNotif && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-md mx-4 p-6">
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">Delete Notification</h3>
+            <p className="text-gray-600 mb-6">
+              Are you sure you want to delete this notification to{' '}
+              <strong>{deleteConfirmNotif.first_name} {deleteConfirmNotif.last_name}</strong>?
+              This action cannot be undone.
+            </p>
+            <div className="flex justify-end space-x-3">
+              <button onClick={() => setDeleteConfirmNotif(null)} className="btn btn-secondary">
+                Cancel
+              </button>
+              <button
+                onClick={() => {
+                  console.log('Delete notification:', deleteConfirmNotif.id)
+                  setDeleteConfirmNotif(null)
+                  fetchData()
+                }}
+                className="btn bg-red-600 hover:bg-red-700 text-white"
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Template Modal */}
       {showTemplateModal && (
