@@ -14,7 +14,8 @@ import {
   BarChart3,
   CreditCard,
   MessageSquare,
-  ClipboardCheck
+  ClipboardCheck,
+  Sparkles
 } from 'lucide-react'
 import { useAuthStore } from '@/stores/authStore'
 
@@ -31,6 +32,7 @@ const navigation = [
   { name: 'Analytics', href: '/analytics', icon: BarChart3 },
   { name: 'Payments', href: '/payments', icon: CreditCard },
   { name: 'Notifications', href: '/notifications', icon: MessageSquare },
+  { name: 'AI Tools', href: '/ai', icon: Sparkles },
   { name: 'Feature Audit', href: '/features', icon: ClipboardCheck },
   { name: 'Settings', href: '/settings', icon: Settings },
 ]

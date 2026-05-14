@@ -22,6 +22,8 @@ import recurringRoutes from './routes/recurring.js'
 import calendarSyncRoutes from './routes/calendar-sync.js'
 import analyticsRoutes from './routes/analytics.js'
 import serviceCatalogRoutes from './routes/service-catalog.js'
+import aiRoutes from './routes/ai.js'
+import customFeaturesRoutes from './routes/customFeatures.js'
 import { authenticateToken } from './middleware/auth.js'
 import { errorHandler } from './middleware/errorHandler.js'
 
@@ -804,6 +806,13 @@ app.use('/api/recurring', bypassAuth, recurringRoutes)
 app.use('/api/calendar-sync', bypassAuth, calendarSyncRoutes)
 app.use('/api/analytics', bypassAuth, analyticsRoutes)
 app.use('/api/service-catalog', bypassAuth, serviceCatalogRoutes)
+app.use('/api/ai', bypassAuth, aiRoutes)
+app.use('/api/custom', bypassAuth, customFeaturesRoutes)
+// // === Batch 09 Gaps & Frontend Mounts ===
+import batch09GapAiBlvd from './routes/batch09GapAi.js'
+import batch09GapNonaiBlvd from './routes/batch09GapNonai.js'
+app.use('/api/gap-ai-boulevard', batch09GapAiBlvd)
+app.use('/api/gap-nonai-boulevard', batch09GapNonaiBlvd)
 
 // Error handling
 app.use(errorHandler)

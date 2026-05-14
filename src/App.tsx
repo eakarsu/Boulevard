@@ -16,6 +16,7 @@ import Payments from '@/pages/Payments'
 import Notifications from '@/pages/Notifications'
 import FeatureAudit from '@/pages/FeatureAudit'
 import FeatureDemo from '@/pages/FeatureDemo'
+import AITools from '@/pages/AITools'
 
 function App() {
   const { isAuthenticated, user } = useAuthStore()
@@ -46,6 +47,7 @@ function App() {
         <Route path="/notifications" element={<Notifications />} />
         <Route path="/features" element={<FeatureAudit />} />
         <Route path="/features/:featureId" element={<FeatureDemo />} />
+        <Route path="/ai" element={<AITools />} />
         <Route path="/book/:businessId" element={<BookingWidget />} />
         <Route path="*" element={<Navigate to="/dashboard" replace />} />
       </Routes>
