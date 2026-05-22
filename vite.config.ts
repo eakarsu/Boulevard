@@ -11,14 +11,14 @@ export default defineConfig({
     },
   },
   server: {
-    port: 3000,
+    port: Number(process.env.FRONTEND_PORT) || 3000,
     proxy: {
       '/api': {
-        target: 'http://localhost:8000',
+        target: `http://localhost:${process.env.BACKEND_PORT || 8000}`,
         changeOrigin: true,
       },
       '/socket.io': {
-        target: 'http://localhost:8000',
+        target: `http://localhost:${process.env.BACKEND_PORT || 8000}`,
         ws: true,
       },
     },

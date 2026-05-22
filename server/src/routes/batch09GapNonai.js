@@ -1,7 +1,7 @@
 // // === Batch 09 Gaps & Frontend Mounts ===
 // Auto-generated gap-nonai endpoints for Boulevard.
 // Calls OpenRouter via native fetch (no SDK); lazily creates gap_features table.
-const express = require('express');
+import express from 'express';
 const router = express.Router();
 
 const OPENROUTER_MODEL = process.env.OPENROUTER_MODEL || 'anthropic/claude-haiku-4.5';
@@ -27,17 +27,9 @@ async function runAI(system, user) {
 }
 
 let _persistInit = false;
-async function persist(feature, input, output) {
-  // Lazy gap_features table — best-effort, swallow errors so AI still works.
-  try {
-    const { PrismaClient } = require('@prisma/client');
-    const p = new PrismaClient();
-    if (!_persistInit) {
-      await p.$executeRawUnsafe('CREATE TABLE IF NOT EXISTS gap_features (id SERIAL PRIMARY KEY, feature TEXT, input JSONB, output JSONB, created_at TIMESTAMPTZ DEFAULT NOW())');
-      _persistInit = true;
-    }
-    await p.$executeRawUnsafe('INSERT INTO gap_features(feature, input, output) VALUES ($1, $2::jsonb, $3::jsonb)', feature, JSON.stringify(input || {}), JSON.stringify(output || {}));
-  } catch { /* swallow */ }
+async function persist(_feature, _input, _output) {
+  // Persist disabled (no Prisma in ESM build); swallow.
+  return;
 }
 
 // POST /api/gap-nonai-boulevard/inventory-retail-module
@@ -118,4 +110,4 @@ router.post('/tipping-commission-reports', async (req, res) => {
   }
 });
 
-module.exports = router;
+export default router;
