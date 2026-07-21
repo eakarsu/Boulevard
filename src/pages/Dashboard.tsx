@@ -283,11 +283,11 @@ export default function Dashboard() {
                             </div>
                             <div className={`ml-2 flex items-baseline text-sm font-semibold ${
                               stat.changeType === 'increase' ? 'text-success-600' :
-                              stat.changeType === 'decrease' ? 'text-error-600' : 'text-gray-600'
+                              String(stat.changeType) === 'decrease' ? 'text-error-600' : 'text-gray-600'
                             }`}>
                               {stat.changeType === 'increase' ? (
                                 <TrendingUp className="self-center flex-shrink-0 h-4 w-4 text-success-500" />
-                              ) : stat.changeType === 'decrease' ? (
+                              ) : String(stat.changeType) === 'decrease' ? (
                                 <TrendingDown className="self-center flex-shrink-0 h-4 w-4 text-error-500" />
                               ) : (
                                 <BarChart3 className="self-center flex-shrink-0 h-4 w-4 text-gray-500" />

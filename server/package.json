@@ -3,14 +3,15 @@
   "version": "1.0.0",
   "description": "Backend API for Boulevard clone",
   "type": "module",
-  "main": "dist/app.js",
+  "main": "dist/src/app.js",
   "scripts": {
     "dev": "tsx watch src/app.ts",
     "build": "tsc",
-    "start": "node dist/app.js",
+    "start": "node dist/src/app.js",
     "db:migrate": "tsx src/database/migrate.ts",
     "db:seed": "tsx src/database/seed.ts",
     "test": "jest",
+    "test:smoke": "node --test tests/import-boundary.test.cjs",
     "test:watch": "jest --watch"
   },
   "dependencies": {

@@ -23,7 +23,7 @@ import FeatureDemo from '@/pages/FeatureDemo'
 import AITools from '@/pages/AITools'
 
 function App() {
-  const { isAuthenticated, user } = useAuthStore()
+  const { isAuthenticated } = useAuthStore()
 
   if (!isAuthenticated) {
     return (

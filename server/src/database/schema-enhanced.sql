@@ -551,6 +551,15 @@ CREATE TABLE IF NOT EXISTS business_hours (
 -- INDEXES
 -- =====================================================
 
+-- The base schema predates these enhanced relationships. CREATE TABLE IF NOT
+-- EXISTS does not add columns to an existing table, so apply them explicitly.
+ALTER TABLE services
+    ADD COLUMN IF NOT EXISTS category_id UUID REFERENCES service_categories(id) ON DELETE SET NULL;
+ALTER TABLE appointments
+    ADD COLUMN IF NOT EXISTS recurring_series_id UUID REFERENCES recurring_series(id) ON DELETE SET NULL;
+ALTER TABLE payments
+    ADD COLUMN IF NOT EXISTS business_id UUID REFERENCES businesses(id) ON DELETE CASCADE;
+
 CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
 CREATE INDEX IF NOT EXISTS idx_users_role ON users(role);
 CREATE INDEX IF NOT EXISTS idx_businesses_owner_id ON businesses(owner_id);

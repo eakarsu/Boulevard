@@ -69,7 +69,7 @@ export default function Settings() {
       setBusinessSettings(prev => ({
         ...prev,
         [parent]: {
-          ...prev[parent as keyof typeof prev],
+          ...(prev[parent as keyof typeof prev] as Record<string, unknown>),
           [child]: value
         }
       }))

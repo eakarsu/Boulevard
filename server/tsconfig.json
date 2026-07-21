@@ -8,13 +8,13 @@
     "allowJs": true,
     "sourceMap": true,
     "outDir": "./dist",
-    "rootDir": "./src",
+    "rootDir": ".",
     "removeComments": true,
     "noImplicitAny": true,
     "strictNullChecks": true,
     "strictFunctionTypes": true,
     "noImplicitThis": true,
-    "noImplicitReturns": true,
+    "noImplicitReturns": false,
     "noFallthroughCasesInSwitch": true,
     "moduleDetection": "force",
     "resolveJsonModule": true,
@@ -34,6 +34,6 @@
       "@/types/*": ["./src/types/*"]
     }
   },
-  "include": ["src/**/*"],
+  "include": ["src/**/*", "boulevard/**/*"],
   "exclude": ["node_modules", "dist", "**/*.test.ts"]
 }

@@ -31,31 +31,26 @@ dotenv.config()
 
 const app = express()
 const server = createServer(app)
+const allowedOrigins = [
+  "http://localhost:3000",
+  "http://localhost:5173",
+  "http://127.0.0.1:3000",
+  "http://127.0.0.1:5173",
+  process.env.FRONTEND_URL
+].filter((origin): origin is string => Boolean(origin))
 const io = new Server(server, {
   cors: {
-    origin: [
-      "http://localhost:3000",
-      "http://localhost:5173", // Vite default port
-      "http://127.0.0.1:3000",
-      "http://127.0.0.1:5173",
-      process.env.FRONTEND_URL
-    ].filter(Boolean),
+    origin: allowedOrigins,
     methods: ["GET", "POST"]
   }
 })
 
-const PORT = process.env.PORT || 8000
+const PORT = Number.parseInt(process.env.PORT || '8000', 10)
 
 // Middleware
 app.use(helmet())
 app.use(cors({
-  origin: [
-    "http://localhost:3000",
-    "http://localhost:5173", // Vite default port
-    "http://127.0.0.1:3000",
-    "http://127.0.0.1:5173",
-    process.env.FRONTEND_URL
-  ].filter(Boolean),
+  origin: allowedOrigins,
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept'],
@@ -89,8 +84,14 @@ app.get('/api/test', (req, res) => {
   res.json({ message: 'API is working', timestamp: new Date().toISOString() })
 })
 
+const requireDebugRoutes = (req: any, res: any, next: any) => {
+  const enabled = process.env.NODE_ENV !== 'production' && process.env.ENABLE_DEBUG_ROUTES === '1'
+  if (!enabled) return res.status(404).json({ error: 'Not found' })
+  return next()
+}
+
 // Add a debug endpoint to check database tables
-app.get('/api/debug/tables', async (req, res) => {
+app.get('/api/debug/tables', requireDebugRoutes, authenticateToken, async (req, res) => {
   try {
     const { query } = await import('./config/database.js')
     
@@ -100,24 +101,24 @@ app.get('/api/debug/tables', async (req, res) => {
       WHERE table_schema = 'public'
     `)
     
-    const counts = {}
+    const counts: Record<string, number | string> = {}
     for (const table of tables.rows) {
       try {
         const result = await query(`SELECT COUNT(*) as count FROM ${table.table_name}`)
         counts[table.table_name] = parseInt(result.rows[0].count)
       } catch (error) {
-        counts[table.table_name] = 'Error: ' + error.message
+        counts[table.table_name] = 'Error: ' + (error instanceof Error ? error.message : 'unknown')
       }
     }
     
     res.json({ tables: counts })
   } catch (error) {
-    res.status(500).json({ error: error.message })
+    res.status(500).json({ error: error instanceof Error ? error.message : 'unknown' })
   }
 })
 
 // Add a debug endpoint to create database schema
-app.post('/api/debug/create-schema', async (req, res) => {
+app.post('/api/debug/create-schema', requireDebugRoutes, authenticateToken, async (req, res) => {
   try {
     const { query } = await import('./config/database.js')
     
@@ -229,7 +230,7 @@ app.post('/api/debug/create-schema', async (req, res) => {
 })
 
 // Add a debug endpoint to create sample data
-app.post('/api/debug/seed', async (req, res) => {
+app.post('/api/debug/seed', requireDebugRoutes, authenticateToken, async (req, res) => {
   try {
     const { query } = await import('./config/database.js')
     
@@ -432,7 +433,7 @@ app.post('/api/debug/seed', async (req, res) => {
 })
 
 // Enhanced seed endpoint for feature demos (15+ items per entity)
-app.post('/api/debug/seed-features', async (req, res) => {
+app.post('/api/debug/seed-features', requireDebugRoutes, authenticateToken, async (req, res) => {
   try {
     const { query } = await import('./config/database.js')
 
@@ -777,37 +778,25 @@ app.post('/api/debug/seed-features', async (req, res) => {
   }
 })
 
-// Temporary middleware to bypass authentication for testing
-const bypassAuth = (req: any, res: any, next: any) => {
-  // Set a mock user for testing with UUID IDs matching seeded data
-  req.user = {
-    id: '11111111-1111-1111-1111-111111111111',
-    email: 'owner@boulevard.com',
-    role: 'owner',
-    businessId: '22222222-2222-2222-2222-222222222222'
-  }
-  next()
-}
-
 // Routes
 app.use('/api/auth', authRoutes)
-app.use('/api/business', bypassAuth, businessRoutes)
-app.use('/api/clients', bypassAuth, clientRoutes)
-app.use('/api/services', bypassAuth, serviceRoutes)
-app.use('/api/staff', bypassAuth, staffRoutes)
-app.use('/api/appointments', bypassAuth, appointmentRoutes)
+app.use('/api/business', authenticateToken, businessRoutes)
+app.use('/api/clients', authenticateToken, clientRoutes)
+app.use('/api/services', authenticateToken, serviceRoutes)
+app.use('/api/staff', authenticateToken, staffRoutes)
+app.use('/api/appointments', authenticateToken, appointmentRoutes)
 app.use('/api', boulevardRoutes)
 
 // New feature routes
-app.use('/api/scheduling', bypassAuth, schedulingRoutes)
-app.use('/api/payments', bypassAuth, paymentsRoutes)
-app.use('/api/notifications', bypassAuth, notificationsRoutes)
-app.use('/api/recurring', bypassAuth, recurringRoutes)
-app.use('/api/calendar-sync', bypassAuth, calendarSyncRoutes)
-app.use('/api/analytics', bypassAuth, analyticsRoutes)
-app.use('/api/service-catalog', bypassAuth, serviceCatalogRoutes)
-app.use('/api/ai', bypassAuth, aiRoutes)
-app.use('/api/custom', bypassAuth, customFeaturesRoutes)
+app.use('/api/scheduling', authenticateToken, schedulingRoutes)
+app.use('/api/payments', authenticateToken, paymentsRoutes)
+app.use('/api/notifications', authenticateToken, notificationsRoutes)
+app.use('/api/recurring', authenticateToken, recurringRoutes)
+app.use('/api/calendar-sync', authenticateToken, calendarSyncRoutes)
+app.use('/api/analytics', authenticateToken, analyticsRoutes)
+app.use('/api/service-catalog', authenticateToken, serviceCatalogRoutes)
+app.use('/api/ai', authenticateToken, aiRoutes)
+app.use('/api/custom', authenticateToken, customFeaturesRoutes)
 // // === Batch 09 Gaps & Frontend Mounts ===
 import batch09GapAiBlvd from './routes/batch09GapAi.js'
 import batch09GapNonaiBlvd from './routes/batch09GapNonai.js'

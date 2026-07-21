@@ -741,8 +741,8 @@ router.get('/cart/:cartId/bookable-dates', async (req, res) => {
 
     // Calculate date range
     const today = new Date()
-    const lowerBound = searchRangeLower ? new Date(searchRangeLower) : today
-    const upperBound = searchRangeUpper ? new Date(searchRangeUpper) : new Date(today.getTime() + 7 * 24 * 60 * 60 * 1000)
+    const lowerBound = typeof searchRangeLower === 'string' ? new Date(searchRangeLower) : today
+    const upperBound = typeof searchRangeUpper === 'string' ? new Date(searchRangeUpper) : new Date(today.getTime() + 7 * 24 * 60 * 60 * 1000)
 
     // Get available dates from bookable times
     const datesResult = await query(`
@@ -779,22 +779,23 @@ router.get('/my-appointments', async (req, res) => {
     
     // In a real implementation, you'd extract client ID from authenticated token
     // For demo purposes, we'll use a placeholder
-    const clientId = req.headers['x-client-id'] || '1'
+    const clientId = String(req.headers['x-client-id'] || '1')
 
     let whereClause = 'WHERE a.client_id = $1'
-    const params = [clientId]
+    const params: string[] = [clientId]
+    const normalizedFilter = typeof filterQuery === 'string' ? filterQuery : ''
     
-    if (filterQuery) {
+    if (normalizedFilter) {
       // Parse filter query (simplified implementation)
-      if (filterQuery.includes('startAt <=')) {
-        const dateMatch = filterQuery.match(/'([^']+)'/);
+      if (normalizedFilter.includes('startAt <=')) {
+        const dateMatch = normalizedFilter.match(/'([^']+)'/);
         if (dateMatch) {
           whereClause += ' AND a.start_at <= $2'
           params.push(dateMatch[1])
         }
       }
-      if (filterQuery.includes('locationId =')) {
-        const locationMatch = filterQuery.match(/locationId = '([^']+)'/);
+      if (normalizedFilter.includes('locationId =')) {
+        const locationMatch = normalizedFilter.match(/locationId = '([^']+)'/);
         if (locationMatch) {
           whereClause += ` AND a.location_id = $${params.length + 1}`
           params.push(locationMatch[1].replace('urn:blvd:Location:', ''))
