@@ -4,8 +4,14 @@ import jwt from 'jsonwebtoken'
 import { query } from '../config/database.js'
 
 const router = express.Router()
-const accessTokenLifetime = (process.env.JWT_EXPIRES_IN || '15m') as jwt.SignOptions['expiresIn']
-const refreshTokenLifetime = (process.env.JWT_REFRESH_EXPIRES_IN || '7d') as jwt.SignOptions['expiresIn']
+const tokenLifetime = (value: string | undefined, fallback: string): jwt.SignOptions['expiresIn'] => {
+  const selected = value || fallback
+  if (/^\d+$/.test(selected)) return Number(selected) as jwt.SignOptions['expiresIn']
+  if (/^\d+(?:ms|s|m|h|d|w|y)$/i.test(selected)) return selected as jwt.SignOptions['expiresIn']
+  return fallback as jwt.SignOptions['expiresIn']
+}
+const accessTokenLifetime = tokenLifetime(process.env.JWT_EXPIRES_IN, '15m')
+const refreshTokenLifetime = tokenLifetime(process.env.JWT_REFRESH_EXPIRES_IN, '7d')
 
 // Login
 router.post('/login', async (req, res) => {

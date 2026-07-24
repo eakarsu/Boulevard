@@ -6,9 +6,6 @@ const router = express.Router()
 // ---------------------------------------------------------------------------
 // OpenRouter helper
 // ---------------------------------------------------------------------------
-const OPENROUTER_URL = 'https://openrouter.ai/api/v1/chat/completions'
-const DEFAULT_MODEL = 'anthropic/claude-haiku-4.5'
-
 interface OpenRouterResult {
   content: string
   model: string
@@ -20,13 +17,16 @@ async function callOpenRouter(
   systemPrompt: string,
   model?: string
 ): Promise<OpenRouterResult> {
-  const chosenModel = model || process.env.OPENROUTER_MODEL || DEFAULT_MODEL
+  const chosenModel = model || String(process.env.OPENROUTER_MODEL || '').trim()
+  const baseUrl = String(process.env.OPENROUTER_BASE_URL || '').replace(/\/+$/, '')
 
   if (!process.env.OPENROUTER_API_KEY) {
     throw new Error('OPENROUTER_API_KEY is not configured')
   }
+  if (!chosenModel) throw new Error('OPENROUTER_MODEL is not configured')
+  if (baseUrl !== 'https://openrouter.ai/api/v1') throw new Error('OPENROUTER_BASE_URL must be https://openrouter.ai/api/v1')
 
-  const response = await fetch(OPENROUTER_URL, {
+  const response = await fetch(`${baseUrl}/chat/completions`, {
     method: 'POST',
     headers: {
       Authorization: `Bearer ${process.env.OPENROUTER_API_KEY}`,
@@ -44,24 +44,26 @@ async function callOpenRouter(
     })
   })
 
+  if (!response.ok) throw new Error(`OpenRouter API error (${response.status})`)
   const data: any = await response.json()
   if (data.error) {
     throw new Error(data.error.message || 'OpenRouter API error')
   }
 
+  const content=String(data.choices?.[0]?.message?.content ?? '').trim()
+  if (!content) throw new Error('OpenRouter returned an empty response')
   return {
-    content: data.choices?.[0]?.message?.content ?? '',
+    content,
     model: chosenModel,
     tokens: data.usage?.total_tokens ?? null
   }
 }
 
 // ---------------------------------------------------------------------------
-// Result persistence (best-effort; never blocks the response)
+// Result persistence
 // ---------------------------------------------------------------------------
 async function ensureAiTable(): Promise<void> {
-  try {
-    await query(`
+  await query(`
       CREATE TABLE IF NOT EXISTS ai_results (
         id SERIAL PRIMARY KEY,
         user_id TEXT,
@@ -74,9 +76,6 @@ async function ensureAiTable(): Promise<void> {
         created_at TIMESTAMP DEFAULT NOW()
       )
     `)
-  } catch (err: any) {
-    console.error('ensureAiTable failed:', err?.message)
-  }
 }
 
 ensureAiTable().catch((err) => console.error('AI table init error:', err?.message))
@@ -87,8 +86,7 @@ async function persistResult(
   params: any,
   result: OpenRouterResult
 ): Promise<void> {
-  try {
-    await query(
+  await query(
       `INSERT INTO ai_results
          (user_id, business_id, endpoint, request_params, result_text, model_used, tokens_used)
        VALUES ($1, $2, $3, $4, $5, $6, $7)`,
@@ -102,9 +100,6 @@ async function persistResult(
         result.tokens
       ]
     )
-  } catch (err: any) {
-    console.error('Failed to persist AI result:', err?.message)
-  }
 }
 
 function getBusinessIdOrError(req: any, res: any): string | null {
