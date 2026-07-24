@@ -10,11 +10,13 @@ async function seed() {
     throw new Error('Refusing to load fixtures without SEED_DATABASE=1')
   }
 
-  const sql = await readFile(path.join(databaseDir, 'seed-complete.sql'), 'utf8')
+  const seedFiles = ['seed-data.sql', 'seed-complete.sql']
   const client = await pool.connect()
   try {
     await client.query('BEGIN')
-    await client.query(sql)
+    for (const seedFile of seedFiles) {
+      await client.query(await readFile(path.join(databaseDir, seedFile), 'utf8'))
+    }
     await client.query('COMMIT')
     console.log('Development fixtures loaded')
   } catch (error) {
