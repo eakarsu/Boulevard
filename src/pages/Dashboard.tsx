@@ -5,6 +5,7 @@ import axios from 'axios'
 import { appointmentsAPI, clientsAPI, servicesAPI, staffAPI } from '../services/api'
 import { AppointmentDetailModal } from '../components/modals'
 import { featureConfigs, categoryColors, categoryLabels } from '../data/featureConfig'
+import { apiRecords } from '../utils/api-records'
 
 interface DashboardStats {
   totalRevenue: number
@@ -88,7 +89,7 @@ export default function Dashboard() {
         
         console.log('API responses:', { appointmentsRes, clientStatsRes, serviceStatsRes, staffStatsRes })
         
-        const todayAppointments = Array.isArray(appointmentsRes.data) ? appointmentsRes.data : []
+        const todayAppointments = apiRecords(appointmentsRes.data)
         const clientStats = clientStatsRes.data?.data || clientStatsRes.data || {}
         const serviceStats = serviceStatsRes.data?.data || serviceStatsRes.data || {}
         const staffStats = staffStatsRes.data?.data || staffStatsRes.data || {}

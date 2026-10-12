@@ -3,6 +3,34 @@ import { query } from '../config/database.js'
 
 const router = express.Router()
 
+function assertAIActive(signal?: AbortSignal) {
+  if (signal?.aborted) throw Object.assign(new Error('AI request canceled'), { name: 'AbortError' })
+}
+
+// Keep provider work tied to this authenticated HTTP request.
+router.use((req: any, res, next) => {
+  if (req.method !== 'POST') return next()
+  const controller = new AbortController()
+  req.aiSignal = controller.signal
+  const timeout = setTimeout(() => controller.abort(), 120000)
+  timeout.unref()
+  const abort = () => controller.abort()
+  const cleanup = () => { clearTimeout(timeout); req.off('aborted', abort); res.off('close', close); res.off('finish', cleanup) }
+  const close = () => { if (!res.writableEnded) abort(); cleanup() }
+  req.once('aborted', abort); res.once('close', close); res.once('finish', cleanup)
+  next()
+})
+
+function sendAIError(req: any, res: any, error: any) {
+  if (req.aiSignal?.aborted) {
+    if (!req.aborted && !res.destroyed) res.status(504).json({ error: 'AI request timed out' })
+    return
+  }
+  const message = error?.message || 'AI request failed'
+  const status = /OPENROUTER_/.test(message) ? 503 : /^OpenRouter/.test(message) ? 502 : 500
+  res.status(status).json({ error: message })
+}
+
 // ---------------------------------------------------------------------------
 // OpenRouter helper
 // ---------------------------------------------------------------------------
@@ -15,8 +43,10 @@ interface OpenRouterResult {
 async function callOpenRouter(
   prompt: string,
   systemPrompt: string,
-  model?: string
+  model?: string,
+  signal?: AbortSignal
 ): Promise<OpenRouterResult> {
+  assertAIActive(signal)
   const chosenModel = model || String(process.env.OPENROUTER_MODEL || '').trim()
   const baseUrl = String(process.env.OPENROUTER_BASE_URL || '').replace(/\/+$/, '')
 
@@ -28,6 +58,7 @@ async function callOpenRouter(
 
   const response = await fetch(`${baseUrl}/chat/completions`, {
     method: 'POST',
+    signal,
     headers: {
       Authorization: `Bearer ${process.env.OPENROUTER_API_KEY}`,
       'Content-Type': 'application/json',
@@ -46,6 +77,7 @@ async function callOpenRouter(
 
   if (!response.ok) throw new Error(`OpenRouter API error (${response.status})`)
   const data: any = await response.json()
+  assertAIActive(signal)
   if (data.error) {
     throw new Error(data.error.message || 'OpenRouter API error')
   }
@@ -86,6 +118,7 @@ async function persistResult(
   params: any,
   result: OpenRouterResult
 ): Promise<void> {
+  assertAIActive(req.aiSignal)
   await query(
       `INSERT INTO ai_results
          (user_id, business_id, endpoint, request_params, result_text, model_used, tokens_used)
@@ -100,6 +133,7 @@ async function persistResult(
         result.tokens
       ]
     )
+  assertAIActive(req.aiSignal)
 }
 
 function getBusinessIdOrError(req: any, res: any): string | null {
@@ -173,12 +207,12 @@ ${JSON.stringify(services.rows, null, 2)}
 Caller context: ${context ? JSON.stringify(context) : '(none)'}
 Caller message: ${message}`
 
-    const result = await callOpenRouter(userPrompt, systemPrompt)
+    const result = await callOpenRouter(userPrompt, systemPrompt, undefined, req.aiSignal)
     await persistResult(req, 'booking-assistant', { message, context }, result)
     res.json({ reply: result.content, model: result.model, tokens: result.tokens })
   } catch (err: any) {
     console.error('booking-assistant error:', err?.message)
-    res.status(500).json({ error: err?.message || 'AI request failed' })
+    sendAIError(req, res, err)
   }
 })
 
@@ -230,12 +264,12 @@ no-shows, last-minute changes, frequency, service value).`
     const userPrompt = `Appointment: ${JSON.stringify(appt)}
 Recent history: ${JSON.stringify(history)}`
 
-    const result = await callOpenRouter(userPrompt, systemPrompt)
+    const result = await callOpenRouter(userPrompt, systemPrompt, undefined, req.aiSignal)
     await persistResult(req, 'no-show-predict', { appointment_id, client_id }, result)
     res.json({ analysis: result.content, model: result.model, tokens: result.tokens })
   } catch (err: any) {
     console.error('no-show-predict error:', err?.message)
-    res.status(500).json({ error: err?.message || 'AI request failed' })
+    sendAIError(req, res, err)
   }
 })
 
@@ -273,12 +307,12 @@ Staff candidates: ${JSON.stringify(staff.rows)}
 Client id: ${client_id ?? '(none)'}
 Preferences: ${JSON.stringify(preferences ?? {})}`
 
-    const result = await callOpenRouter(userPrompt, systemPrompt)
+    const result = await callOpenRouter(userPrompt, systemPrompt, undefined, req.aiSignal)
     await persistResult(req, 'staff-match', { service_id, client_id, preferences }, result)
     res.json({ ranking: result.content, model: result.model, tokens: result.tokens })
   } catch (err: any) {
     console.error('staff-match error:', err?.message)
-    res.status(500).json({ error: err?.message || 'AI request failed' })
+    sendAIError(req, res, err)
   }
 })
 
@@ -323,12 +357,12 @@ Catalog: ${JSON.stringify(catalog.rows)}
 Occasion: ${occasion ?? '(none)'}
 Budget: ${budget ?? '(none)'}`
 
-    const result = await callOpenRouter(userPrompt, systemPrompt)
+    const result = await callOpenRouter(userPrompt, systemPrompt, undefined, req.aiSignal)
     await persistResult(req, 'service-recommend', { client_id, occasion, budget }, result)
     res.json({ recommendations: result.content, model: result.model, tokens: result.tokens })
   } catch (err: any) {
     console.error('service-recommend error:', err?.message)
-    res.status(500).json({ error: err?.message || 'AI request failed' })
+    sendAIError(req, res, err)
   }
 })
 
@@ -370,12 +404,12 @@ walk-out risk. Keep client preferences and service durations intact. Return STRI
     const userPrompt = `Date: ${date}
 Appointments: ${JSON.stringify(appts.rows)}`
 
-    const result = await callOpenRouter(userPrompt, systemPrompt)
+    const result = await callOpenRouter(userPrompt, systemPrompt, undefined, req.aiSignal)
     await persistResult(req, 'schedule-optimizer', { date, staff_id }, result)
     res.json({ plan: result.content, model: result.model, tokens: result.tokens })
   } catch (err: any) {
     console.error('schedule-optimizer error:', err?.message)
-    res.status(500).json({ error: err?.message || 'AI request failed' })
+    sendAIError(req, res, err)
   }
 })
 
@@ -411,12 +445,12 @@ two concrete next-best actions. Plain markdown, max 250 words.`
     const userPrompt = `Client: ${JSON.stringify(client.rows[0] ?? null)}
 Appointments: ${JSON.stringify(appts.rows)}`
 
-    const result = await callOpenRouter(userPrompt, systemPrompt)
+    const result = await callOpenRouter(userPrompt, systemPrompt, undefined, req.aiSignal)
     await persistResult(req, 'client-insights', { client_id }, result)
     res.json({ insights: result.content, model: result.model, tokens: result.tokens })
   } catch (err: any) {
     console.error('client-insights error:', err?.message)
-    res.status(500).json({ error: err?.message || 'AI request failed' })
+    sendAIError(req, res, err)
   }
 })
 
@@ -455,12 +489,12 @@ STRICT JSON: { "upsells": [ { "name": string, "kind": "addon"|"product"|"upgrade
     const userPrompt = `Appointment: ${JSON.stringify(appt.rows[0] ?? null)}
 Catalog: ${JSON.stringify(catalog.rows)}`
 
-    const result = await callOpenRouter(userPrompt, systemPrompt)
+    const result = await callOpenRouter(userPrompt, systemPrompt, undefined, req.aiSignal)
     await persistResult(req, 'upsell-suggestions', { appointment_id }, result)
     res.json({ upsells: result.content, model: result.model, tokens: result.tokens })
   } catch (err: any) {
     console.error('upsell-suggestions error:', err?.message)
-    res.status(500).json({ error: err?.message || 'AI request failed' })
+    sendAIError(req, res, err)
   }
 })
 
@@ -491,12 +525,12 @@ Rating: ${rating ?? 'unknown'}/5
 Tone: ${tone ?? 'warm, professional'}
 Review: ${review_text}`
 
-    const result = await callOpenRouter(userPrompt, systemPrompt)
+    const result = await callOpenRouter(userPrompt, systemPrompt, undefined, req.aiSignal)
     await persistResult(req, 'review-response', { rating, platform, tone }, result)
     res.json({ reply: result.content, model: result.model, tokens: result.tokens })
   } catch (err: any) {
     console.error('review-response error:', err?.message)
-    res.status(500).json({ error: err?.message || 'AI request failed' })
+    sendAIError(req, res, err)
   }
 })
 
@@ -534,12 +568,12 @@ Last visit: ${JSON.stringify(lastVisit.rows[0] ?? null)}
 Channel: ${channel ?? 'sms'}
 Offer: ${offer ?? '15% off your next visit'}`
 
-    const result = await callOpenRouter(userPrompt, systemPrompt)
+    const result = await callOpenRouter(userPrompt, systemPrompt, undefined, req.aiSignal)
     await persistResult(req, 'reactivation-message', { client_id, channel, offer }, result)
     res.json({ message: result.content, model: result.model, tokens: result.tokens })
   } catch (err: any) {
     console.error('reactivation-message error:', err?.message)
-    res.status(500).json({ error: err?.message || 'AI request failed' })
+    sendAIError(req, res, err)
   }
 })
 
@@ -585,12 +619,12 @@ out top categories, gaps, and one risk. Plain markdown, max 200 words.`
 Pipeline by category: ${JSON.stringify(upcoming.rows)}
 Trailing 12-week revenue: ${JSON.stringify(trailing.rows)}`
 
-    const result = await callOpenRouter(userPrompt, systemPrompt)
+    const result = await callOpenRouter(userPrompt, systemPrompt, undefined, req.aiSignal)
     await persistResult(req, 'revenue-forecast', { from, to }, result)
     res.json({ forecast: result.content, model: result.model, tokens: result.tokens })
   } catch (err: any) {
     console.error('revenue-forecast error:', err?.message)
-    res.status(500).json({ error: err?.message || 'AI request failed' })
+    sendAIError(req, res, err)
   }
 })
 
@@ -640,12 +674,12 @@ STRICT JSON: { "ranked": [ { "client_id": string, "name": string, "score": numbe
 Service: ${JSON.stringify(svc)}
 Waitlist: ${JSON.stringify(waitlist)}`
 
-    const result = await callOpenRouter(userPrompt, systemPrompt)
+    const result = await callOpenRouter(userPrompt, systemPrompt, undefined, req.aiSignal)
     await persistResult(req, 'waitlist-intelligence', { service_id, slot_start, staff_id }, result)
     res.json({ ranking: result.content, model: result.model, tokens: result.tokens })
   } catch (err: any) {
     console.error('waitlist-intelligence error:', err?.message)
-    res.status(500).json({ error: err?.message || 'AI request failed' })
+    sendAIError(req, res, err)
   }
 })
 

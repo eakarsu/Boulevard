@@ -5,6 +5,7 @@ import {
 } from 'lucide-react'
 import { paymentsAPI } from '../services/api'
 import { PaymentDetailModal } from '../components/modals'
+import { apiRecords } from '../utils/api-records'
 
 interface Payment {
   id: string
@@ -59,7 +60,7 @@ export default function Payments() {
         paymentsAPI.getPaymentHistory({ status: statusFilter || undefined, limit: 100 }),
         paymentsAPI.getPaymentStats(period)
       ])
-      setPayments(paymentsRes.data?.data || [])
+      setPayments(apiRecords(paymentsRes.data))
       setStats(statsRes.data?.data || null)
     } catch (error) {
       console.error('Failed to fetch payments:', error)

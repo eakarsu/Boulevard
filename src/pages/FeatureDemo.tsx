@@ -4,6 +4,7 @@ import { ArrowLeft, AlertCircle, XCircle, FileDown, FileText, CheckSquare, Trash
 import { featureConfigs, categoryLabels, categoryColors } from '../data/featureConfig'
 import { clientsAPI, servicesAPI, staffAPI, paymentsAPI } from '../services/api'
 import { ClientDetailModal, ServiceDetailModal, StaffDetailModal, PaymentDetailModal } from '../components/modals'
+import { apiRecords } from '../utils/api-records'
 
 export default function FeatureDemo() {
   const { featureId } = useParams<{ featureId: string }>()
@@ -30,20 +31,20 @@ export default function FeatureDemo() {
         let response: any
         switch (feature.apiSource) {
           case 'clients':
-            response = await clientsAPI.getClients()
-            setData(Array.isArray(response.data) ? response.data : response.data?.data || [])
+            response = await clientsAPI.getClients({ limit: 100 })
+            setData(apiRecords(response.data, 'clients'))
             break
           case 'services':
             response = await servicesAPI.getServices()
-            setData(Array.isArray(response.data) ? response.data : response.data?.data || [])
+            setData(apiRecords(response.data))
             break
           case 'staff':
             response = await staffAPI.getStaff()
-            setData(Array.isArray(response.data) ? response.data : response.data?.data || [])
+            setData(apiRecords(response.data))
             break
           case 'payments':
             response = await paymentsAPI.getPaymentHistory()
-            setData(Array.isArray(response.data) ? response.data : response.data?.data || [])
+            setData(apiRecords(response.data))
             break
           default:
             setData([])

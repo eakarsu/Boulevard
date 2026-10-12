@@ -4,6 +4,7 @@ import {
   Clock, Star, Target, Award, ArrowUpRight, ArrowDownRight, Download
 } from 'lucide-react'
 import { analyticsAPI } from '../services/api'
+import { apiRecords } from '../utils/api-records'
 
 interface DashboardData {
   revenue: {
@@ -98,10 +99,10 @@ export default function Analytics() {
       ])
 
       setDashboard(dashboardRes.data?.data || null)
-      setStaffPerformance(staffRes.data?.data || [])
-      setServicePerformance(serviceRes.data?.data || [])
+      setStaffPerformance(apiRecords(staffRes.data))
+      setServicePerformance(apiRecords(serviceRes.data))
       setClientInsights(clientRes.data?.data || null)
-      setRevenueData(revenueRes.data?.data || [])
+      setRevenueData(apiRecords(revenueRes.data))
     } catch (error) {
       console.error('Failed to fetch analytics:', error)
     } finally {

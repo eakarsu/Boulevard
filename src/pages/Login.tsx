@@ -99,11 +99,12 @@ export default function Login() {
             type="button"
             onClick={() => { setEmail(import.meta.env.VITE_DEMO_EMAIL || ''); setPassword(import.meta.env.VITE_DEMO_PASSWORD || ''); }}
             disabled={!import.meta.env.VITE_DEMO_EMAIL || !import.meta.env.VITE_DEMO_PASSWORD}
-            aria-label="Auto Fill Demo Credentials"
+            aria-label="Fill demo credentials"
             style={{ width: '100%', marginBottom: '12px', padding: '10px 14px', borderRadius: '8px', border: '1px solid currentColor', background: 'transparent', cursor: 'pointer' }}
           >
-            Auto Fill Demo Credentials
+            Fill demo credentials
           </button>
+          {(!import.meta.env.VITE_DEMO_EMAIL || !import.meta.env.VITE_DEMO_PASSWORD) && <p className="mb-3 text-sm text-amber-800">Demo credentials are not configured for this build.</p>}
           <button
               type="submit"
               disabled={isLoading}

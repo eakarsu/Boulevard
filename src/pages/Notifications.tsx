@@ -4,6 +4,7 @@ import {
   CheckCircle, XCircle, AlertCircle, Plus, Trash2, Edit
 } from 'lucide-react'
 import { notificationsAPI } from '../services/api'
+import { apiRecords } from '../utils/api-records'
 import { NotificationDetailModal } from '../components/modals'
 
 interface NotificationLog {
@@ -66,10 +67,10 @@ export default function Notifications() {
       setLoading(true)
       if (activeTab === 'log') {
         const res = await notificationsAPI.getNotificationLog({ limit: 100 })
-        setNotificationLog(res.data?.data || [])
+        setNotificationLog(apiRecords(res.data))
       } else if (activeTab === 'templates') {
         const res = await notificationsAPI.getTemplates()
-        setTemplates(res.data?.data || [])
+        setTemplates(apiRecords(res.data))
       }
     } catch (error) {
       console.error('Failed to fetch notifications:', error)
