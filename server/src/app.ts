@@ -78,6 +78,9 @@ app.use((req, res, next) => {
 app.get('/health', (req, res) => {
   res.status(200).json({ status: 'OK', timestamp: new Date().toISOString() })
 })
+app.get('/api/health', (req, res) => {
+  res.status(200).json({ status: 'ok' })
+})
 
 // Add a test endpoint to verify API is working
 app.get('/api/test', (req, res) => {

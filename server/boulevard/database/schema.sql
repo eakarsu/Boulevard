@@ -168,6 +168,68 @@ CREATE TABLE IF NOT EXISTS boulevard_service_addons (
   UNIQUE(base_service_id, addon_service_id)
 );
 
+-- Gift Card Designs and Fulfillments
+CREATE TABLE IF NOT EXISTS boulevard_gift_card_designs (
+  id SERIAL PRIMARY KEY,
+  business_id INTEGER REFERENCES boulevard_businesses(id),
+  name VARCHAR(255) NOT NULL,
+  foreground_text VARCHAR(20) DEFAULT '#000000',
+  background_color VARCHAR(20) DEFAULT '#FFFFFF',
+  image_url VARCHAR(500),
+  is_selected BOOLEAN DEFAULT false,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS boulevard_gift_card_fulfillments (
+  id VARCHAR(255) PRIMARY KEY,
+  cart_item_id INTEGER REFERENCES boulevard_cart_items(id),
+  fulfillment_type VARCHAR(50) NOT NULL DEFAULT 'email',
+  sender_name VARCHAR(255),
+  message_from_sender TEXT,
+  recipient_name VARCHAR(255),
+  recipient_email VARCHAR(255),
+  delivery_date DATE,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Clients, Appointments, and Memberships
+CREATE TABLE IF NOT EXISTS boulevard_clients (
+  id SERIAL PRIMARY KEY,
+  first_name VARCHAR(100) NOT NULL,
+  last_name VARCHAR(100) NOT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS boulevard_appointments (
+  id SERIAL PRIMARY KEY,
+  client_id INTEGER REFERENCES boulevard_clients(id),
+  location_id INTEGER REFERENCES boulevard_locations(id),
+  start_at TIMESTAMP NOT NULL,
+  end_at TIMESTAMP,
+  duration INTEGER,
+  cancelled BOOLEAN DEFAULT false,
+  state VARCHAR(50) DEFAULT 'FINAL',
+  notes TEXT,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS boulevard_memberships (
+  id SERIAL PRIMARY KEY,
+  client_id INTEGER REFERENCES boulevard_clients(id),
+  term_number INTEGER NOT NULL DEFAULT 1,
+  start_on DATE NOT NULL,
+  end_on DATE,
+  status VARCHAR(50) DEFAULT 'ACTIVE',
+  name VARCHAR(255) NOT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Cart item classification and gift-card fields used by the cart routes
+ALTER TABLE boulevard_cart_items ADD COLUMN IF NOT EXISTS item_type VARCHAR(50) DEFAULT 'bookable';
+ALTER TABLE boulevard_cart_items ADD COLUMN IF NOT EXISTS gift_card_uuid VARCHAR(255);
+ALTER TABLE boulevard_cart_items ADD COLUMN IF NOT EXISTS gift_card_price DECIMAL(10,2);
+ALTER TABLE boulevard_cart_items ADD COLUMN IF NOT EXISTS gift_card_design_id INTEGER REFERENCES boulevard_gift_card_designs(id);
+
 -- Indexes for performance
 CREATE INDEX IF NOT EXISTS idx_boulevard_carts_uuid ON boulevard_carts(cart_uuid);
 CREATE INDEX IF NOT EXISTS idx_boulevard_cart_guests_uuid ON boulevard_cart_guests(guest_uuid);

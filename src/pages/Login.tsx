@@ -7,17 +7,17 @@ export default function Login() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [isLoading, setIsLoading] = useState(false)
+  const [demoError, setDemoError] = useState('')
   const { login } = useAuthStore()
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
+  const performLogin = (loginEmail: string) => {
     setIsLoading(true)
 
     // Mock login - replace with actual API call
     setTimeout(() => {
       const mockUser: User = {
         id: '1',
-        email,
+        email: loginEmail,
         firstName: 'John',
         lastName: 'Doe',
         role: 'owner',
@@ -29,6 +29,11 @@ export default function Login() {
       login(mockUser, 'mock-token', 'mock-refresh-token')
       setIsLoading(false)
     }, 1000)
+  }
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    performLogin(email)
   }
 
   return (
@@ -95,16 +100,22 @@ export default function Login() {
           </div>
 
           <div>
+          {demoError && <p role="alert" style={{ color: '#b91c1c', marginBottom: '12px' }}>{demoError}</p>}
           <button
             type="button"
-            onClick={() => { setEmail(import.meta.env.VITE_DEMO_EMAIL || ''); setPassword(import.meta.env.VITE_DEMO_PASSWORD || ''); }}
-            disabled={!import.meta.env.VITE_DEMO_EMAIL || !import.meta.env.VITE_DEMO_PASSWORD}
+            onClick={async () => {
+              if (import.meta.env.VITE_DEMO_EMAIL && import.meta.env.VITE_DEMO_PASSWORD) { setEmail(import.meta.env.VITE_DEMO_EMAIL); setPassword(import.meta.env.VITE_DEMO_PASSWORD); return }
+              try {
+                const response = await fetch('/api/auth/demo-credentials', { cache: 'no-store' })
+                if (response.ok) { const data = await response.json(); if (data?.email && data?.password) { setEmail(data.email); setPassword(data.password); return } }
+              } catch { /* fall through to message below */ }
+              setDemoError('Demo credentials are not configured for this environment.')
+            }}
             aria-label="Fill demo credentials"
             style={{ width: '100%', marginBottom: '12px', padding: '10px 14px', borderRadius: '8px', border: '1px solid currentColor', background: 'transparent', cursor: 'pointer' }}
           >
             Fill demo credentials
           </button>
-          {(!import.meta.env.VITE_DEMO_EMAIL || !import.meta.env.VITE_DEMO_PASSWORD) && <p className="mb-3 text-sm text-amber-800">Demo credentials are not configured for this build.</p>}
           <button
               type="submit"
               disabled={isLoading}

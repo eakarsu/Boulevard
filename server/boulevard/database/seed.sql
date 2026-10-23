@@ -70,6 +70,23 @@ INSERT INTO boulevard_staff_service_variants (service_id, staff_id, price, durat
 (10, 3, 65.00, 60)  -- The Jentleped
 ON CONFLICT (service_id, staff_id) DO NOTHING;
 
+-- Insert sample gift card design, client, appointment, and membership
+INSERT INTO boulevard_gift_card_designs (id, business_id, name, foreground_text, background_color, image_url, is_selected) VALUES
+(1, 1, 'Classic', '#000000', '#FFFFFF', 'https://example.com/gift-card-classic.png', true)
+ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO boulevard_clients (id, first_name, last_name) VALUES
+(1, 'Test', 'Client')
+ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO boulevard_appointments (id, client_id, location_id, start_at, end_at, duration, cancelled, state, notes) VALUES
+(1, 1, 1, CURRENT_DATE + interval '1 day 10 hours', CURRENT_DATE + interval '1 day 11 hours', 60, false, 'FINAL', 'Sample appointment')
+ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO boulevard_memberships (id, client_id, term_number, start_on, end_on, status, name) VALUES
+(1, 1, 1, CURRENT_DATE, CURRENT_DATE + interval '1 year', 'ACTIVE', 'Jentlemanicure Membership')
+ON CONFLICT (id) DO NOTHING;
+
 -- Insert sample bookable times (next 30 days, 9 AM to 6 PM, excluding weekends)
 INSERT INTO boulevard_bookable_times (time_uuid, location_id, staff_id, start_time, end_time, is_available, score)
 SELECT
